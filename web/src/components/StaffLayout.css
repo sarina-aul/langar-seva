@@ -1,0 +1,42 @@
+.staff-shell__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.staff-shell__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.staff-shell__back {
+  font-size: 0.85rem;
+  color: var(--color-kesari-dark);
+  text-decoration: none;
+  margin-bottom: 0.15rem;
+}
+
+.staff-shell__back:hover {
+  text-decoration: underline;
+}
+
+.staff-shell__title {
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.staff-shell__subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.staff-shell__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

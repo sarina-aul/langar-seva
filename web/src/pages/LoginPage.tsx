@@ -53,7 +53,7 @@ export function LoginPage() {
 
   return (
     <Layout>
-      <div className="login-card">
+      <div className="login-card surface-card">
         <div className="login-card__intro">
           <h2 className="login-card__heading">Staff sign in</h2>
           <p className="login-card__subtext">

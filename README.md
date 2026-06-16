@@ -165,6 +165,7 @@ Supported roles (via `app_metadata.role`):
 | `/login` | Staff sign-in |
 | `/staff` | Authenticated staff dashboard (batch-ready alerts for coordinators) |
 | `/staff/kitchen` | Kitchen batch workflow |
+| `/staff/recipients` | Coordinator only — review and approve pending requests |
 
 Public intake at `/` remains anonymous — no login required for recipients.
 
@@ -176,6 +177,7 @@ Public intake at `/` remains anonymous — no login required for recipients.
 - ✅ Staff login (email/password, invite-only)
 - ✅ Kitchen batch workflow (6 stages, meal counts)
 - ✅ Ready in-app notification for coordinators
-- ⏳ Coordinator dashboard (future)
+- ✅ Coordinator recipients dashboard (approve → `approved`, reject → `rejected`)
+- ⏳ Batch recipient assignment (next step)
 - ⏳ Email notifications (deferred)
 - ⏳ Geocoding pipeline (placeholder columns ready)

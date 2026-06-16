@@ -1,20 +1,10 @@
+import {
+  DELIVERY_WINDOW_LABELS,
+  formatRecipientAddress,
+  LANGUAGE_LABELS,
+} from '../lib/recipientLabels'
 import type { RecipientRow } from '../types/database'
 import './Confirmation.css'
-
-const WINDOW_LABELS: Record<string, string> = {
-  morning: 'Morning (8am – 11am)',
-  afternoon: 'Afternoon (11am – 3pm)',
-  evening: 'Evening (3pm – 7pm)',
-  flexible: 'Flexible',
-}
-
-const LANGUAGE_LABELS: Record<string, string> = {
-  english: 'English',
-  punjabi: 'Punjabi',
-  hindi: 'Hindi',
-  urdu: 'Urdu',
-  other: 'Other',
-}
 
 interface ConfirmationProps {
   recipient: RecipientRow
@@ -23,15 +13,15 @@ interface ConfirmationProps {
 
 export function Confirmation({ recipient, onReset }: ConfirmationProps) {
   return (
-    <div className="form-card confirmation">
+    <div className="form-card confirmation surface-card">
       <div className="confirmation__icon" aria-hidden="true">
         ✓
       </div>
 
       <h2 className="confirmation__heading">Request received</h2>
 
-      <div className="status-badge" role="status">
-        <span className="status-badge__dot" aria-hidden="true" />
+      <div className="status-pill status-pill--pending" role="status">
+        <span className="status-pill__dot" aria-hidden="true" />
         Pending review
       </div>
 
@@ -42,10 +32,7 @@ export function Confirmation({ recipient, onReset }: ConfirmationProps) {
 
       <dl className="confirmation__details">
         <dt>Delivery address</dt>
-        <dd>
-          {recipient.address}
-          {recipient.unit_buzz ? `, ${recipient.unit_buzz}` : ''}
-        </dd>
+        <dd>{formatRecipientAddress(recipient)}</dd>
 
         <dt>Meals</dt>
         <dd>
@@ -54,7 +41,7 @@ export function Confirmation({ recipient, onReset }: ConfirmationProps) {
         </dd>
 
         <dt>Delivery window</dt>
-        <dd>{WINDOW_LABELS[recipient.delivery_window] ?? recipient.delivery_window}</dd>
+        <dd>{DELIVERY_WINDOW_LABELS[recipient.delivery_window] ?? recipient.delivery_window}</dd>
 
         <dt>Language</dt>
         <dd>{LANGUAGE_LABELS[recipient.language] ?? recipient.language}</dd>

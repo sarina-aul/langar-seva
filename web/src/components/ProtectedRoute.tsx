@@ -2,11 +2,13 @@ import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { getStaffRole } from '../lib/roles'
+import type { StaffRole } from '../types/auth'
 import '../components/IntakeForm.css'
 import './ProtectedRoute.css'
 
 interface ProtectedRouteProps {
   children: ReactNode
+  requiredRole?: StaffRole
 }
 
 function AuthLoading() {
@@ -34,7 +36,7 @@ function NoAccess({ onSignOut }: { onSignOut: () => void }) {
   )
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { session, user, loading, signOut } = useAuth()
   const location = useLocation()
 
@@ -49,6 +51,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   const role = getStaffRole(user)
   if (!role) {
+    return <NoAccess onSignOut={() => void signOut()} />
+  }
+
+  if (requiredRole && role !== requiredRole) {
     return <NoAccess onSignOut={() => void signOut()} />
   }
 

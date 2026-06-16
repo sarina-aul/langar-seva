@@ -5,6 +5,8 @@ export type RecipientStatus =
   | 'paused'
   | 'rejected'
 
+export type RecipientFilterStatus = 'pending' | 'approved' | 'rejected' | 'all'
+
 export type DeliveryWindow = 'morning' | 'afternoon' | 'evening' | 'flexible'
 
 export type LanguagePref = 'english' | 'punjabi' | 'hindi' | 'urdu' | 'other'

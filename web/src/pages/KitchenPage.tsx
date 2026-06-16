@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { StaffLayout } from '../components/StaffLayout'
 import { useAuth } from '../hooks/useAuth'
 import { isCoordinator } from '../lib/roles'
 import { getSupabase } from '../lib/supabase'
@@ -73,7 +73,7 @@ function CreateBatchForm({ onCreated }: CreateBatchFormProps) {
   }
 
   return (
-    <div className="kitchen-card">
+    <div className="kitchen-card surface-card">
       <h3 className="kitchen-card__title">Create tonight&apos;s batch</h3>
       <p className="kitchen-card__subtitle">No batch has been created for today yet.</p>
 
@@ -299,7 +299,7 @@ function BatchView({ batch, onBatchUpdated }: BatchViewProps) {
 
   return (
     <div className="kitchen-batch">
-      <div className="kitchen-card kitchen-card--stage">
+      <div className="kitchen-card kitchen-card--stage surface-card">
         <div className="stage-header">
           <div>
             <p className="stage-header__label">Current stage</p>
@@ -342,7 +342,7 @@ function BatchView({ batch, onBatchUpdated }: BatchViewProps) {
       <MealCountEditor batch={batch} onUpdated={onBatchUpdated} />
 
       {batch.notes && (
-        <div className="kitchen-card kitchen-notes">
+        <div className="kitchen-card kitchen-notes surface-card">
           <p className="kitchen-notes__label">Notes</p>
           <p className="kitchen-notes__text">{batch.notes}</p>
         </div>
@@ -356,8 +356,7 @@ function BatchView({ batch, onBatchUpdated }: BatchViewProps) {
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export function KitchenPage() {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const coordinator = isCoordinator(user)
 
   const [batch, setBatch] = useState<BatchRow | null>(null)
@@ -387,56 +386,44 @@ export function KitchenPage() {
     return () => { mounted = false }
   }, [])
 
-  async function handleSignOut() {
-    await signOut()
-    navigate('/login', { replace: true })
-  }
-
   return (
-    <div className="kitchen-layout">
-      <header className="kitchen-header">
-        <div className="kitchen-header__left">
-          <Link to="/staff" className="kitchen-header__back">← Dashboard</Link>
-          <h2 className="kitchen-header__title">Kitchen</h2>
-          <p className="kitchen-header__date">
-            {new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+    <StaffLayout
+      title="Kitchen"
+      subtitle={new Date().toLocaleDateString([], {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })}
+      backTo="/staff"
+    >
+      {loading && (
+        <div className="kitchen-loading surface-card" role="status">
+          <p>Loading tonight&apos;s batch…</p>
+        </div>
+      )}
+
+      {!loading && fetchError && (
+        <div className="form-error-banner" role="alert">
+          {fetchError}
+        </div>
+      )}
+
+      {!loading && !fetchError && batch && (
+        <BatchView batch={batch} onBatchUpdated={setBatch} />
+      )}
+
+      {!loading && !fetchError && !batch && coordinator && (
+        <CreateBatchForm onCreated={setBatch} />
+      )}
+
+      {!loading && !fetchError && !batch && !coordinator && (
+        <div className="kitchen-card kitchen-empty surface-card">
+          <p className="kitchen-empty__text">No batch has been created for tonight yet.</p>
+          <p className="kitchen-empty__sub">
+            A coordinator will create it before service begins.
           </p>
         </div>
-        <button type="button" className="btn-secondary" onClick={() => void handleSignOut()}>
-          Sign out
-        </button>
-      </header>
-
-      <main className="kitchen-main">
-        {loading && (
-          <div className="kitchen-loading" role="status">
-            <p>Loading tonight&apos;s batch…</p>
-          </div>
-        )}
-
-        {!loading && fetchError && (
-          <div className="form-error-banner" role="alert">
-            {fetchError}
-          </div>
-        )}
-
-        {!loading && !fetchError && batch && (
-          <BatchView batch={batch} onBatchUpdated={setBatch} />
-        )}
-
-        {!loading && !fetchError && !batch && coordinator && (
-          <CreateBatchForm onCreated={setBatch} />
-        )}
-
-        {!loading && !fetchError && !batch && !coordinator && (
-          <div className="kitchen-card kitchen-empty">
-            <p className="kitchen-empty__text">No batch has been created for tonight yet.</p>
-            <p className="kitchen-empty__sub">
-              A coordinator will create it before service begins.
-            </p>
-          </div>
-        )}
-      </main>
-    </div>
+      )}
+    </StaffLayout>
   )
 }

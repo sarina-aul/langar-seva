@@ -1,68 +1,56 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ReadyNotificationBanner } from '../components/ReadyNotificationBanner'
-import { Layout } from '../components/Layout'
+import { StaffLayout } from '../components/StaffLayout'
 import { useAuth } from '../hooks/useAuth'
 import { useBatchReadyNotification } from '../hooks/useBatchReadyNotification'
+import { usePendingRecipientCount } from '../hooks/usePendingRecipientCount'
 import { getStaffRole, isCoordinator } from '../lib/roles'
 import './StaffHome.css'
 
 export function StaffHome() {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const role = getStaffRole(user)
   const coordinator = isCoordinator(user)
   const { notification, markRead } = useBatchReadyNotification(user)
-
-  async function handleSignOut() {
-    await signOut()
-    navigate('/login', { replace: true })
-  }
+  const pendingCount = usePendingRecipientCount(user)
 
   const roleLabel =
     role === 'coordinator' ? 'Coordinator' : role === 'kitchen_admin' ? 'Kitchen admin' : 'Staff'
 
   return (
-    <Layout>
-      <div className="staff-home">
-        <header className="staff-home__header">
-          <div>
-            <h2 className="staff-home__heading">Staff dashboard</h2>
-            <p className="staff-home__meta">
-              Signed in as <strong>{user?.email}</strong> · {roleLabel}
-            </p>
-          </div>
-          <button type="button" className="btn-secondary" onClick={() => void handleSignOut()}>
-            Sign out
-          </button>
-        </header>
+    <StaffLayout
+      title="Staff dashboard"
+      subtitle={`Signed in as ${user?.email ?? 'staff'} · ${roleLabel}`}
+    >
+      {coordinator && notification && (
+        <ReadyNotificationBanner
+          notification={notification}
+          onDismiss={() => void markRead(notification.id)}
+          onGoToKitchen={() => void markRead(notification.id)}
+        />
+      )}
 
-        {coordinator && notification && (
-          <ReadyNotificationBanner
-            notification={notification}
-            onDismiss={() => void markRead(notification.id)}
-            onGoToKitchen={() => void markRead(notification.id)}
-          />
-        )}
-
-        <nav className="staff-nav" aria-label="Staff sections">
-          <span className="staff-nav__item staff-nav__item--disabled">Recipients (soon)</span>
-          <Link to="/staff/kitchen" className="staff-nav__item staff-nav__item--link">
-            Kitchen
+      <div className="staff-home__placeholder surface-card">
+        <h3 className="staff-home__placeholder-title">
+          {coordinator ? 'Coordinator dashboard' : "Tonight's kitchen batch"}
+        </h3>
+        <p className="staff-home__placeholder-text">
+          {coordinator
+            ? "Review pending requests and you'll be alerted when tonight's batch is ready for delivery."
+            : 'Track prep, cooking, packing, and dispatch for tonight\'s langar.'}
+        </p>
+        {coordinator && (
+          <Link to="/staff/recipients" className="btn-primary btn-primary--inline staff-home__cta">
+            Review recipients
+            {pendingCount !== null && pendingCount > 0 ? ` (${pendingCount} pending)` : ''}
           </Link>
-        </nav>
-
-        <div className="staff-home__placeholder">
-          <h3 className="staff-home__placeholder-title">Tonight&apos;s kitchen batch</h3>
-          <p className="staff-home__placeholder-text">
-            {coordinator
-              ? "You'll be alerted here when tonight's batch is ready for delivery."
-              : 'Track prep, cooking, packing, and dispatch for tonight\'s langar.'}
-          </p>
-          <Link to="/staff/kitchen" className="btn-primary staff-home__kitchen-link">
+        )}
+        {!coordinator && (
+          <Link to="/staff/kitchen" className="btn-primary btn-primary--inline staff-home__cta">
             Go to kitchen dashboard
           </Link>
-        </div>
+        )}
       </div>
-    </Layout>
+    </StaffLayout>
   )
 }

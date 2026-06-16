@@ -41,22 +41,13 @@
   margin-bottom: 1.5rem;
 }
 
+/* legacy alias — use status-pill from components.css */
 .status-badge__dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
   background: var(--color-kesari);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  animation: status-pulse 2s ease-in-out infinite;
 }
 
 .confirmation__details {
@@ -81,21 +72,4 @@
 .confirmation__details dd {
   margin: 0.15rem 0 0;
   font-weight: 500;
-}
-
-.btn-secondary {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.btn-secondary:hover {
-  border-color: var(--color-kesari);
-  color: var(--color-kesari-dark);
 }

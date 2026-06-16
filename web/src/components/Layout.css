@@ -6,10 +6,14 @@
 
 .layout__header {
   padding: var(--space-page);
-  padding-bottom: 0;
-  max-width: calc(var(--max-width) + 2 * var(--space-page));
+  padding-bottom: 0.75rem;
+  max-width: calc(var(--max-width-staff) + 2 * var(--space-page));
   margin: 0 auto;
   width: 100%;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-header);
 }
 
 .layout__brand {
@@ -20,10 +24,11 @@
 }
 
 .layout__mark {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 50%;
-  background: var(--color-kesari);
+  background: linear-gradient(145deg, var(--color-kesari) 0%, var(--color-kesari-dark) 100%);
+  box-shadow: 0 2px 8px rgba(232, 120, 32, 0.35);
   display: grid;
   place-items: center;
   color: white;
@@ -45,7 +50,7 @@
 .layout__main {
   flex: 1;
   padding: var(--space-page);
-  max-width: calc(var(--max-width) + 2 * var(--space-page));
+  max-width: calc(var(--max-width-staff) + 2 * var(--space-page));
   margin: 0 auto;
   width: 100%;
 }

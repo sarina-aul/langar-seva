@@ -1,3 +1,5 @@
+@import './styles/components.css';
+
 :root {
   /* Seva Eats design tokens — aligned with Magic Patterns / PRD */
   --color-cream: #fff8f0;
@@ -19,8 +21,10 @@
   --radius-lg: 20px;
 
   --shadow-soft: 0 4px 24px rgba(26, 26, 24, 0.06);
+  --shadow-header: 0 1px 0 rgba(26, 26, 24, 0.04);
   --space-page: clamp(1rem, 4vw, 2rem);
   --max-width: 32rem;
+  --max-width-staff: 40rem;
 }
 
 *,
@@ -40,7 +44,9 @@ body {
   font-size: 1rem;
   line-height: 1.5;
   color: var(--color-text);
-  background: var(--color-cream);
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(232, 120, 32, 0.08), transparent),
+    linear-gradient(180deg, #fff8f0 0%, #fff3e6 100%);
   -webkit-font-smoothing: antialiased;
 }
 

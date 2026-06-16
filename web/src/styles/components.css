@@ -1,0 +1,141 @@
+/* Shared PRD UI components — used across public intake and staff dashboards */
+
+.surface-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--color-border);
+}
+
+.btn-primary {
+  display: inline-block;
+  width: 100%;
+  padding: 0.9rem 1.25rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-kesari);
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.1s ease;
+  min-height: 44px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-kesari-dark);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary--inline {
+  width: auto;
+}
+
+.btn-secondary {
+  display: inline-block;
+  padding: 0.65rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  min-height: 44px;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-kesari);
+  background: var(--color-kesari-light);
+  color: var(--color-kesari-dark);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-error-banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: #fef3f2;
+  color: var(--color-error);
+  font-size: 0.9rem;
+  border: 1px solid #fecdca;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.status-pill__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-kesari);
+}
+
+.status-pill--pending .status-pill__dot {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+.status-pill--approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-pill--approved .status-pill__dot {
+  background: var(--color-success);
+}
+
+.status-pill--rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-pill--rejected .status-pill__dot {
+  background: var(--color-error);
+}
+
+.status-pill--active {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-pill--paused {
+  background: var(--color-cream);
+  color: var(--color-text-secondary);
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

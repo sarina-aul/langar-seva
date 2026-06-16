@@ -6,6 +6,7 @@ import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
+import { RecipientsPage } from './pages/RecipientsPage'
 import { StaffHome } from './pages/StaffHome'
 import type { RecipientRow } from './types/database'
 
@@ -44,6 +45,14 @@ function App() {
         element={
           <ProtectedRoute>
             <KitchenPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/recipients"
+        element={
+          <ProtectedRoute requiredRole="coordinator">
+            <RecipientsPage />
           </ProtectedRoute>
         }
       />

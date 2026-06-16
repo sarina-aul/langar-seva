@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import {
+  CONTACT_PREF_OPTIONS,
+  DELIVERY_WINDOW_OPTIONS,
+  FREQUENCY_OPTIONS,
+  LANGUAGE_OPTIONS,
+} from '../lib/recipientLabels'
 import { getSupabase } from '../lib/supabase'
 import type {
   ContactPref,
@@ -9,34 +15,6 @@ import type {
   RecipientRow,
 } from '../types/database'
 import './IntakeForm.css'
-
-const DELIVERY_WINDOWS: { value: DeliveryWindow; label: string }[] = [
-  { value: 'morning', label: 'Morning (8am – 11am)' },
-  { value: 'afternoon', label: 'Afternoon (11am – 3pm)' },
-  { value: 'evening', label: 'Evening (3pm – 7pm)' },
-  { value: 'flexible', label: 'Flexible — any window works' },
-]
-
-const LANGUAGES: { value: LanguagePref; label: string }[] = [
-  { value: 'english', label: 'English' },
-  { value: 'punjabi', label: 'Punjabi' },
-  { value: 'hindi', label: 'Hindi' },
-  { value: 'urdu', label: 'Urdu' },
-  { value: 'other', label: 'Other' },
-]
-
-const FREQUENCIES: { value: DeliveryFrequency; label: string }[] = [
-  { value: 'one_time', label: 'One time' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'biweekly', label: 'Every two weeks' },
-  { value: 'monthly', label: 'Monthly' },
-]
-
-const CONTACT_PREFS: { value: ContactPref; label: string }[] = [
-  { value: 'phone', label: 'Phone call' },
-  { value: 'text', label: 'Text message' },
-  { value: 'either', label: 'Either is fine' },
-]
 
 export interface IntakeFormData {
   name: string
@@ -182,7 +160,7 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
   }
 
   return (
-    <div className="form-card">
+    <div className="form-card surface-card">
       <div className="form-card__intro">
         <h2 className="form-card__heading">Request langar meals</h2>
         <p className="form-card__subtext">
@@ -246,7 +224,7 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
               onChange={(e) => updateField('language', e.target.value as LanguagePref)}
               required
             >
-              {LANGUAGES.map((opt) => (
+              {LANGUAGE_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -351,7 +329,7 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
               onChange={(e) => updateField('delivery_window', e.target.value as DeliveryWindow)}
               required
             >
-              {DELIVERY_WINDOWS.map((opt) => (
+              {DELIVERY_WINDOW_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -379,7 +357,7 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
                 }
               >
                 <option value="">Not sure yet</option>
-                {FREQUENCIES.map((opt) => (
+                {FREQUENCY_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
@@ -400,7 +378,7 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
                 }
               >
                 <option value="">No preference</option>
-                {CONTACT_PREFS.map((opt) => (
+                {CONTACT_PREF_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>

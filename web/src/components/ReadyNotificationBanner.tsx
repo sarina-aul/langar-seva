@@ -30,7 +30,7 @@ export function ReadyNotificationBanner({
       <div className="ready-banner__actions">
         <Link
           to="/staff/kitchen"
-          className="btn-primary ready-banner__cta"
+          className="btn-primary btn-primary--inline ready-banner__cta"
           onClick={() => onGoToKitchen()}
         >
           Go to kitchen
