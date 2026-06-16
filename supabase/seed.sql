@@ -1,3 +1,8 @@
-# Local dev seed (no secrets committed).
-# Staff accounts are admin-provisioned only — see README "Staff auth" section.
-# After changing auth config: supabase stop && supabase start
+-- Local dev seed (no secrets committed).
+-- Single-Gurdwara v1: no gurdwaras table; multi-site support deferred.
+--
+-- After `supabase db reset`, re-create the coordinator test user:
+--
+--   ./scripts/setup-coordinator.sh coordinator123
+--
+-- See README "Staff auth" section for full instructions.

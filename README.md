@@ -163,7 +163,8 @@ Supported roles (via `app_metadata.role`):
 | Path | Access |
 |------|--------|
 | `/login` | Staff sign-in |
-| `/staff` | Authenticated staff only (placeholder dashboard) |
+| `/staff` | Authenticated staff dashboard (batch-ready alerts for coordinators) |
+| `/staff/kitchen` | Kitchen batch workflow |
 
 Public intake at `/` remains anonymous — no login required for recipients.
 
@@ -173,6 +174,8 @@ Public intake at `/` remains anonymous — no login required for recipients.
 - ✅ Confirmation screen (“Pending review”)
 - ✅ Supabase insert with RLS
 - ✅ Staff login (email/password, invite-only)
-- ⏳ Kitchen batch workflow (future)
+- ✅ Kitchen batch workflow (6 stages, meal counts)
+- ✅ Ready in-app notification for coordinators
 - ⏳ Coordinator dashboard (future)
+- ⏳ Email notifications (deferred)
 - ⏳ Geocoding pipeline (placeholder columns ready)

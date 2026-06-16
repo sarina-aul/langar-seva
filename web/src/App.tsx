@@ -4,6 +4,7 @@ import { Confirmation } from './components/Confirmation'
 import { IntakeForm } from './components/IntakeForm'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
 import { StaffHome } from './pages/StaffHome'
 import type { RecipientRow } from './types/database'
@@ -35,6 +36,14 @@ function App() {
         element={
           <ProtectedRoute>
             <StaffHome />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/kitchen"
+        element={
+          <ProtectedRoute>
+            <KitchenPage />
           </ProtectedRoute>
         }
       />

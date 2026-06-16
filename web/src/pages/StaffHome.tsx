@@ -1,13 +1,17 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { ReadyNotificationBanner } from '../components/ReadyNotificationBanner'
 import { Layout } from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
-import { getStaffRole } from '../lib/roles'
+import { useBatchReadyNotification } from '../hooks/useBatchReadyNotification'
+import { getStaffRole, isCoordinator } from '../lib/roles'
 import './StaffHome.css'
 
 export function StaffHome() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const role = getStaffRole(user)
+  const coordinator = isCoordinator(user)
+  const { notification, markRead } = useBatchReadyNotification(user)
 
   async function handleSignOut() {
     await signOut()
@@ -32,16 +36,31 @@ export function StaffHome() {
           </button>
         </header>
 
+        {coordinator && notification && (
+          <ReadyNotificationBanner
+            notification={notification}
+            onDismiss={() => void markRead(notification.id)}
+            onGoToKitchen={() => void markRead(notification.id)}
+          />
+        )}
+
         <nav className="staff-nav" aria-label="Staff sections">
           <span className="staff-nav__item staff-nav__item--disabled">Recipients (soon)</span>
-          <span className="staff-nav__item staff-nav__item--disabled">Kitchen (soon)</span>
+          <Link to="/staff/kitchen" className="staff-nav__item staff-nav__item--link">
+            Kitchen
+          </Link>
         </nav>
 
         <div className="staff-home__placeholder">
-          <h3 className="staff-home__placeholder-title">Kitchen dashboard coming soon</h3>
+          <h3 className="staff-home__placeholder-title">Tonight&apos;s kitchen batch</h3>
           <p className="staff-home__placeholder-text">
-            Tonight&apos;s langar batch workflow — prep through dispatch — will live here.
+            {coordinator
+              ? "You'll be alerted here when tonight's batch is ready for delivery."
+              : 'Track prep, cooking, packing, and dispatch for tonight\'s langar.'}
           </p>
+          <Link to="/staff/kitchen" className="btn-primary staff-home__kitchen-link">
+            Go to kitchen dashboard
+          </Link>
         </div>
       </div>
     </Layout>
