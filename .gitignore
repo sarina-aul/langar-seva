@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+web/node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+web/.env
+web/.env.local
+
+# Build
+web/dist/
+
+# Supabase local
+supabase/.branches
+supabase/.temp
+
+# OS / editor
+.DS_Store
+*.log
+
+# Vite
+web/*.local
