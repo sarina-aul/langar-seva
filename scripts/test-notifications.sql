@@ -45,6 +45,22 @@ SELECT
   now(), now(), '', '', '', ''
 WHERE NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'coordinator@example.com');
 
+INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+SELECT
+  u.id,
+  u.id,
+  u.id,
+  jsonb_build_object('sub', u.id::text, 'email', u.email),
+  'email',
+  now(),
+  now(),
+  now()
+FROM auth.users u
+WHERE u.email = 'coordinator@example.com'
+  AND NOT EXISTS (
+    SELECT 1 FROM auth.identities i WHERE i.user_id = u.id AND i.provider = 'email'
+  );
+
 DELETE FROM public.staff_notifications;
 DELETE FROM public.batches;
 

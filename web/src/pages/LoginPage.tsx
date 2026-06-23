@@ -1,7 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import '../components/IntakeForm.css'
-import { Layout } from '../components/Layout'
+import { SevaLogo } from '../components/SevaLogo'
 import { useAuth } from '../hooks/useAuth'
 import { getStaffHomePath, getStaffRole } from '../lib/roles'
 import './LoginPage.css'
@@ -25,6 +24,17 @@ export function LoginPage() {
     }
   }, [loading, session, role, nextPath, navigate])
 
+  if (loading) {
+    return (
+      <div className="login-page">
+        <div className="login-page__loading" role="status" aria-live="polite">
+          <SevaLogo size="md" />
+          <p className="login-page__loading-text">Loading…</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!loading && session && role) {
     return <Navigate to={getStaffHomePath(role)} replace />
   }
@@ -47,74 +57,85 @@ export function LoginPage() {
       setError('This account does not have staff permissions.')
       return
     }
-
-    // Redirect happens via useEffect once session is in context
   }
 
   return (
-    <Layout>
-      <div className="login-card surface-card">
-        <div className="login-card__intro">
-          <h2 className="login-card__heading">Staff sign in</h2>
-          <p className="login-card__subtext">
+    <div className="login-page">
+      <header className="login-page__hero">
+        <div className="login-page__hero-inner">
+          <Link to="/" className="login-page__back">
+            <span className="login-page__back-icon" aria-hidden="true">
+              ←
+            </span>
+            <span>Back</span>
+          </Link>
+
+          <SevaLogo size="md" variant="paper" />
+          <h1 className="login-page__title">Staff sign in</h1>
+          <p className="login-page__subtitle">
             For coordinators and kitchen staff. Recipients do not need an account.
           </p>
         </div>
+      </header>
 
-        <form className="login-form" onSubmit={handleSubmit} noValidate>
-          {error && (
-            <div className="form-error-banner" role="alert">
-              {error}
+      <main className="login-page__main">
+        <div className="login-page__panel">
+          <p className="login-page__scope">Staff portal</p>
+
+          <form className="login-form" onSubmit={handleSubmit} noValidate>
+            {error && (
+              <div className="login-form__error" role="alert">
+                {error}
+              </div>
+            )}
+
+            <div className="login-field">
+              <label className="login-field__label" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                className="login-field__input"
+                type="email"
+                name="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={submitting}
+              />
             </div>
-          )}
 
-          <div className="field">
-            <label className="field__label" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              className="field__input"
-              type="email"
-              name="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={submitting}
-            />
-          </div>
+            <div className="login-field">
+              <label className="login-field__label" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                className="login-field__input"
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={submitting}
+              />
+            </div>
 
-          <div className="field">
-            <label className="field__label" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              className="field__input"
-              type="password"
-              name="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={submitting}
-            />
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <button type="submit" className="login-form__submit" disabled={submitting}>
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
 
-        <p className="login-card__footer">
-          <Link to="/" className="login-card__link">
+        <footer className="login-page__footer">
+          <p className="login-page__footer-note">All meals are free • Community Seva</p>
+          <Link to="/" className="login-page__footer-link">
             Request meal delivery
           </Link>
-        </p>
-      </div>
-    </Layout>
+        </footer>
+      </main>
+    </div>
   )
 }

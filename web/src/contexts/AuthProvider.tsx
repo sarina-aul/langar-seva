@@ -43,14 +43,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
       user,
       loading,
       signIn: async (email, password) => {
-        const { data, error } = await getSupabase().auth.signInWithPassword({ email, password })
-        if (error) {
-          return { error: 'Email or password is incorrect.', user: null }
+        try {
+          const { data, error } = await getSupabase().auth.signInWithPassword({ email, password })
+          if (error) {
+            const msg = error.message.toLowerCase()
+            if (
+              msg.includes('failed to fetch') ||
+              msg.includes('network') ||
+              error.status === 0
+            ) {
+              return {
+                error:
+                  'Cannot reach Supabase. Start Docker, then run: supabase start && ./scripts/setup-coordinator.sh',
+                user: null,
+              }
+            }
+            if (msg.includes('invalid login credentials') || msg.includes('invalid email or password')) {
+              return { error: 'Email or password is incorrect.', user: null }
+            }
+            return { error: error.message, user: null }
+          }
+          setSession(data.session)
+          setUser(data.user)
+          return { error: null, user: data.user }
+        } catch {
+          return {
+            error:
+              'Cannot reach Supabase. Start Docker, then run: supabase start && ./scripts/setup-coordinator.sh',
+            user: null,
+          }
         }
-        // Sync immediately so ProtectedRoute sees the session before navigate()
-        setSession(data.session)
-        setUser(data.user)
-        return { error: null, user: data.user }
       },
       signOut: async () => {
         await getSupabase().auth.signOut()

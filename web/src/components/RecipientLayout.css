@@ -1,0 +1,91 @@
+.recipient-layout {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+.recipient-layout__frame {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-paper);
+  background-image: var(--texture-gurmukhi);
+}
+
+.recipient-layout__content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.recipient-layout__footer {
+  flex-shrink: 0;
+  padding: 1.25rem var(--space-page) max(1.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-hairline);
+  text-align: center;
+}
+
+.recipient-layout__footer-note {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(15, 26, 46, 0.4);
+}
+
+.recipient-layout__footer-link {
+  display: inline-block;
+  margin-top: 0.625rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(15, 26, 46, 0.45);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.recipient-layout__footer-link:hover {
+  color: var(--color-ink);
+}
+
+@media (min-width: 768px) {
+  .recipient-layout {
+    align-items: flex-start;
+    padding: 2rem;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(15, 26, 46, 0.04), transparent),
+      var(--color-paper);
+  }
+
+  .recipient-layout__frame {
+    width: min(400px, 100%);
+    min-height: min(800px, calc(100dvh - 4rem));
+    max-height: calc(100dvh - 4rem);
+    border: 8px solid var(--color-ink);
+    border-radius: 2.5rem;
+    box-shadow: 0 24px 64px rgba(15, 26, 46, 0.18);
+    overflow: hidden;
+    position: sticky;
+    top: 2rem;
+  }
+
+  .recipient-layout__frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8rem;
+    height: 1.5rem;
+    background: var(--color-ink);
+    border-radius: 0 0 1rem 1rem;
+    z-index: 2;
+    pointer-events: none;
+  }
+}

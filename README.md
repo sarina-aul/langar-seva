@@ -120,7 +120,20 @@ Staff sign in at `/login` with email + password. There is **no public signup** �
 
 ### Create a local test user
 
-After `supabase start`, create a coordinator via **Supabase Studio** or curl.
+After `supabase start`, staff users are seeded automatically on `supabase db reset` (see `supabase/seed.sql`).
+
+To (re)create them without a full reset:
+
+```bash
+./scripts/setup-coordinator.sh coordinator123
+```
+
+| Email | Password | Role |
+|-------|----------|------|
+| `coordinator@example.com` | `coordinator123` | coordinator (full access) |
+| `kitchen@example.com` | `coordinator123` | kitchen_admin (kitchen only) |
+
+You can also create a coordinator via **Supabase Studio** or curl.
 
 **Studio:** http://127.0.0.1:54323 → Authentication → Users → Add user. Then set **App metadata**:
 

@@ -1,48 +1,72 @@
 .confirmation {
-  text-align: center;
-  padding: clamp(1.5rem, 5vw, 2.5rem) clamp(1rem, 4vw, 2rem);
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.confirmation__icon {
-  width: 4rem;
-  height: 4rem;
-  margin: 0 auto 1.25rem;
-  border-radius: 50%;
-  background: var(--color-kesari-light);
-  color: var(--color-kesari-dark);
-  display: grid;
-  place-items: center;
-  font-size: 1.75rem;
+.confirmation__header {
+  padding: 2rem var(--space-page) 1.75rem;
+  border-bottom: 1px solid var(--color-hairline);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  position: relative;
+  overflow: hidden;
 }
 
-.confirmation__heading {
-  font-size: 1.75rem;
-  margin-bottom: 0.75rem;
+.confirmation__header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--texture-dot-grid-light);
+  background-size: 24px 24px;
+  opacity: 0.1;
+  pointer-events: none;
 }
 
-.confirmation__message {
-  color: var(--color-text-secondary);
-  margin-bottom: 1.5rem;
-  max-width: 24rem;
-  margin-left: auto;
-  margin-right: auto;
+.confirmation__scope,
+.confirmation__title,
+.confirmation__subtitle {
+  position: relative;
+  z-index: 1;
 }
 
-.status-badge {
+.confirmation__scope {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(250, 246, 238, 0.55);
+}
+
+.confirmation__title {
+  margin-top: 0.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 2.25rem);
+  line-height: 1.1;
+  color: var(--color-paper);
+}
+
+.confirmation__subtitle {
+  margin-top: 0.5rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: rgba(250, 246, 238, 0.72);
+}
+
+.confirmation__body {
+  flex: 1;
+  padding: 1.5rem var(--space-page) 2rem;
+}
+
+.confirmation__status {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  background: #fff7ed;
-  color: #9a3412;
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
-/* legacy alias — use status-pill from components.css */
-.status-badge__dot {
+.confirmation__status-dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
@@ -50,26 +74,75 @@
   animation: status-pulse 2s ease-in-out infinite;
 }
 
+.confirmation__status-label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-kesari-dark);
+}
+
+.confirmation__message {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: rgba(15, 26, 46, 0.72);
+}
+
 .confirmation__details {
-  text-align: left;
-  background: var(--color-cream);
-  border-radius: var(--radius-md);
+  margin: 1.5rem 0;
+  border: 1px solid var(--color-hairline);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.confirmation__detail {
   padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
+  border-bottom: 1px solid var(--color-hairline);
 }
 
-.confirmation__details dt {
-  color: var(--color-text-secondary);
-  font-size: 0.8rem;
-  margin-top: 0.75rem;
+.confirmation__detail:last-child {
+  border-bottom: none;
 }
 
-.confirmation__details dt:first-child {
-  margin-top: 0;
+.confirmation__detail dt {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(15, 26, 46, 0.45);
 }
 
-.confirmation__details dd {
-  margin: 0.15rem 0 0;
-  font-weight: 500;
+.confirmation__detail dd {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--color-ink);
+}
+
+.confirmation__footnote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.875rem;
+  color: rgba(15, 26, 46, 0.6);
+  line-height: 1.5;
+}
+
+.confirmation__reset {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--color-hairline);
+  background: transparent;
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  min-height: 44px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.confirmation__reset:hover {
+  border-color: var(--color-ink);
+  background: rgba(15, 26, 46, 0.04);
 }

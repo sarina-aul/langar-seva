@@ -4,6 +4,10 @@
   /* Seva Eats design tokens — aligned with Magic Patterns / PRD */
   --color-cream: #fff8f0;
   --color-surface: #ffffff;
+  --color-ink: #0f1a2e;
+  --color-ink-soft: #1e2a47;
+  --color-paper: #faf6ee;
+  --color-hairline: #eee5cc;
   --color-kesari: #e87820;
   --color-kesari-dark: #c45f10;
   --color-kesari-light: #fde8d4;
@@ -11,10 +15,16 @@
   --color-text-secondary: #5c5f5a;
   --color-border: #e8e4dc;
   --color-success: #2d6a4f;
+  --color-forest: #1f5132;
   --color-error: #b42318;
 
   --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --texture-gurmukhi: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h8v1H0z' fill='%230F1A2E' fill-opacity='0.04' fill-rule='evenodd'/%3E%3C/svg%3E");
+  --texture-dot-grid-light: radial-gradient(circle, #faf6ee 1px, transparent 1px);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -25,6 +35,7 @@
   --space-page: clamp(1rem, 4vw, 2rem);
   --max-width: 32rem;
   --max-width-staff: 40rem;
+  --max-width-staff-wide: 64rem;
 }
 
 *,

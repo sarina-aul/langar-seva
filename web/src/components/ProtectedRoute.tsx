@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { getStaffRole } from '../lib/roles'
 import type { StaffRole } from '../types/auth'
-import '../components/IntakeForm.css'
 import './ProtectedRoute.css'
 
 interface ProtectedRouteProps {

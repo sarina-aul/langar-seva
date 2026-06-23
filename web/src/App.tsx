@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { Confirmation } from './components/Confirmation'
 import { IntakeForm } from './components/IntakeForm'
-import { Layout } from './components/Layout'
+import { RecipientHome } from './components/RecipientHome'
+import { RecipientLayout } from './components/RecipientLayout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
@@ -10,20 +11,30 @@ import { RecipientsPage } from './pages/RecipientsPage'
 import { StaffHome } from './pages/StaffHome'
 import type { RecipientRow } from './types/database'
 
+type IntakeStep = 'home' | 'form'
+
 function IntakePage() {
+  const [step, setStep] = useState<IntakeStep>('home')
   const [submittedRecipient, setSubmittedRecipient] = useState<RecipientRow | null>(null)
 
+  function handleReset() {
+    setSubmittedRecipient(null)
+    setStep('home')
+  }
+
   return (
-    <Layout>
+    <RecipientLayout>
       {submittedRecipient ? (
-        <Confirmation
-          recipient={submittedRecipient}
-          onReset={() => setSubmittedRecipient(null)}
-        />
+        <Confirmation recipient={submittedRecipient} onReset={handleReset} />
+      ) : step === 'home' ? (
+        <RecipientHome onRequest={() => setStep('form')} />
       ) : (
-        <IntakeForm onSuccess={setSubmittedRecipient} />
+        <IntakeForm
+          onSuccess={setSubmittedRecipient}
+          onBack={() => setStep('home')}
+        />
       )}
-    </Layout>
+    </RecipientLayout>
   )
 }
 

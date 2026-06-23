@@ -53,9 +53,10 @@ interface FieldErrors {
   meals?: string
   delivery_window?: string
   language?: string
+  consent?: string
 }
 
-function validate(data: IntakeFormData): FieldErrors {
+function validate(data: IntakeFormData, consent: boolean): FieldErrors {
   const errors: FieldErrors = {}
 
   if (!data.name.trim()) errors.name = 'Please enter your name.'
@@ -67,6 +68,9 @@ function validate(data: IntakeFormData): FieldErrors {
   }
   if (data.meals < 1 || data.meals > 20) {
     errors.meals = 'Number of meals must be between 1 and 20.'
+  }
+  if (!consent) {
+    errors.consent = 'Please provide consent to proceed.'
   }
 
   return errors
@@ -92,11 +96,13 @@ function recipientFromSubmission(payload: RecipientInsert): RecipientRow {
 
 interface IntakeFormProps {
   onSuccess: (recipient: RecipientRow) => void
+  onBack: () => void
 }
 
-export function IntakeForm({ onSuccess }: IntakeFormProps) {
+export function IntakeForm({ onSuccess, onBack }: IntakeFormProps) {
   const [form, setForm] = useState<IntakeFormData>(initialForm)
   const [errors, setErrors] = useState<FieldErrors>({})
+  const [consent, setConsent] = useState(false)
   const [mealsTouched, setMealsTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -118,7 +124,7 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
     event.preventDefault()
     setSubmitError(null)
 
-    const fieldErrors = validate(form)
+    const fieldErrors = validate(form, consent)
     if (Object.keys(fieldErrors).length > 0) {
       setErrors(fieldErrors)
       return
@@ -160,49 +166,55 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
   }
 
   return (
-    <div className="form-card surface-card">
-      <div className="form-card__intro">
-        <h2 className="form-card__heading">Request langar meals</h2>
-        <p className="form-card__subtext">
-          Tell us where to deliver. A coordinator will review your request — usually within one business day.
-        </p>
-      </div>
+    <div className="intake-form-page">
+      <header className="intake-form-page__header">
+        <button type="button" className="intake-form-page__back" onClick={onBack}>
+          <span className="intake-form-page__back-icon" aria-hidden="true">
+            ←
+          </span>
+          <span>Back</span>
+        </button>
+        <div>
+          <h1 className="intake-form-page__title">Intake Form</h1>
+          <p className="intake-form-page__subtitle">Request Langar Delivery</p>
+        </div>
+      </header>
 
       {submitError && (
-        <div className="form-error-banner" role="alert">
+        <div className="intake-form-page__banner" role="alert">
           {submitError}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate>
-        <section className="form-section" aria-labelledby="contact-heading">
-          <h3 id="contact-heading" className="form-section__title">
-            Contact
-          </h3>
+      <form className="intake-form" onSubmit={handleSubmit} noValidate>
+        <section className="intake-section" aria-labelledby="household-heading">
+          <h2 id="household-heading" className="intake-section__title">
+            1. Your Household
+          </h2>
 
-          <div className="field">
-            <label className="field__label" htmlFor="name">
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="name">
               Full name
             </label>
             <input
               id="name"
-              className={`field__input${errors.name ? ' field__input--error' : ''}`}
+              className={`intake-field__input${errors.name ? ' intake-field__input--error' : ''}`}
               type="text"
               autoComplete="name"
               value={form.name}
               onChange={(e) => updateField('name', e.target.value)}
               required
             />
-            {errors.name && <span className="field__error">{errors.name}</span>}
+            {errors.name && <span className="intake-field__error">{errors.name}</span>}
           </div>
 
-          <div className="field">
-            <label className="field__label" htmlFor="phone">
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="phone">
               Phone number
             </label>
             <input
               id="phone"
-              className={`field__input${errors.phone ? ' field__input--error' : ''}`}
+              className={`intake-field__input${errors.phone ? ' intake-field__input--error' : ''}`}
               type="tel"
               autoComplete="tel"
               inputMode="tel"
@@ -210,191 +222,174 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
               onChange={(e) => updateField('phone', e.target.value)}
               required
             />
-            {errors.phone && <span className="field__error">{errors.phone}</span>}
+            {errors.phone && <span className="intake-field__error">{errors.phone}</span>}
           </div>
 
-          <div className="field">
-            <label className="field__label" htmlFor="language">
-              Preferred language
-            </label>
-            <select
-              id="language"
-              className="field__select"
-              value={form.language}
-              onChange={(e) => updateField('language', e.target.value as LanguagePref)}
-              required
-            >
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <div className="intake-field-row">
+            <div className="intake-field">
+              <label className="intake-field__label" htmlFor="household_size">
+                Household size
+              </label>
+              <select
+                id="household_size"
+                className={`intake-field__input intake-field__select${errors.household_size ? ' intake-field__input--error' : ''}`}
+                value={form.household_size}
+                onChange={(e) => updateField('household_size', Number(e.target.value))}
+                required
+              >
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              {errors.household_size && (
+                <span className="intake-field__error">{errors.household_size}</span>
+              )}
+            </div>
+
+            <div className="intake-field">
+              <label className="intake-field__label" htmlFor="language">
+                Preferred language
+              </label>
+              <select
+                id="language"
+                className="intake-field__input intake-field__select"
+                value={form.language}
+                onChange={(e) => updateField('language', e.target.value as LanguagePref)}
+                required
+              >
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </section>
 
-        <section className="form-section" aria-labelledby="delivery-heading">
-          <h3 id="delivery-heading" className="form-section__title">
-            Delivery address
-          </h3>
+        <section className="intake-section" aria-labelledby="delivery-heading">
+          <h2 id="delivery-heading" className="intake-section__title">
+            2. Delivery Details
+          </h2>
 
-          <div className="field">
-            <label className="field__label" htmlFor="address">
-              Street address
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="address">
+              Home address — delivery destination
             </label>
             <input
               id="address"
-              className={`field__input${errors.address ? ' field__input--error' : ''}`}
+              className={`intake-field__input${errors.address ? ' intake-field__input--error' : ''}`}
               type="text"
               autoComplete="street-address"
+              placeholder="Where should the sevadar deliver?"
               value={form.address}
               onChange={(e) => updateField('address', e.target.value)}
               required
             />
-            {errors.address && <span className="field__error">{errors.address}</span>}
+            {errors.address && <span className="intake-field__error">{errors.address}</span>}
           </div>
 
-          <div className="field">
-            <label className="field__label" htmlFor="unit_buzz">
-              Unit / buzzer
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="unit_buzz">
+              Apt / buzz code
             </label>
             <input
               id="unit_buzz"
-              className={`field__input${errors.unit_buzz ? ' field__input--error' : ''}`}
+              className={`intake-field__input${errors.unit_buzz ? ' intake-field__input--error' : ''}`}
               type="text"
-              placeholder="e.g. Unit 4B, buzz 1234, or none"
+              placeholder="Helps the sevadar find you"
               value={form.unit_buzz}
               onChange={(e) => updateField('unit_buzz', e.target.value)}
               required
             />
-            {errors.unit_buzz && <span className="field__error">{errors.unit_buzz}</span>}
+            {errors.unit_buzz && <span className="intake-field__error">{errors.unit_buzz}</span>}
           </div>
+
+          <fieldset className="intake-fieldset">
+            <legend className="intake-field__label">Preferred window</legend>
+            <div className="intake-radio-list">
+              {DELIVERY_WINDOW_OPTIONS.map((opt) => (
+                <label key={opt.value} className="intake-radio">
+                  <input
+                    type="radio"
+                    name="delivery_window"
+                    value={opt.value}
+                    checked={form.delivery_window === opt.value}
+                    onChange={() => updateField('delivery_window', opt.value)}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset className="intake-fieldset">
+            <legend className="intake-field__label">Contact preference</legend>
+            <div className="intake-radio-row">
+              <label className="intake-radio">
+                <input
+                  type="radio"
+                  name="contact_pref"
+                  value=""
+                  checked={form.contact_pref === ''}
+                  onChange={() => updateField('contact_pref', '')}
+                />
+                <span>No preference</span>
+              </label>
+              {CONTACT_PREF_OPTIONS.map((opt) => (
+                <label key={opt.value} className="intake-radio">
+                  <input
+                    type="radio"
+                    name="contact_pref"
+                    value={opt.value}
+                    checked={form.contact_pref === opt.value}
+                    onChange={() => updateField('contact_pref', opt.value)}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </section>
 
-        <section className="form-section" aria-labelledby="meals-heading">
-          <h3 id="meals-heading" className="form-section__title">
-            Meals
-          </h3>
+        <section className="intake-section" aria-labelledby="meals-heading">
+          <h2 id="meals-heading" className="intake-section__title">
+            3. Meals &amp; Dietary Needs
+          </h2>
 
-          <div className="field-row field-row--2">
-            <div className="field">
-              <label className="field__label" htmlFor="household_size">
-                Household size
-              </label>
-              <input
-                id="household_size"
-                className={`field__input${errors.household_size ? ' field__input--error' : ''}`}
-                type="number"
-                min={1}
-                max={20}
-                value={form.household_size}
-                onChange={(e) => updateField('household_size', Number(e.target.value))}
-                required
-              />
-              {errors.household_size && (
-                <span className="field__error">{errors.household_size}</span>
-              )}
-            </div>
-
-            <div className="field">
-              <label className="field__label" htmlFor="meals">
-                Meals needed
-              </label>
-              <span className="field__hint">Defaults to household size</span>
-              <input
-                id="meals"
-                className={`field__input${errors.meals ? ' field__input--error' : ''}`}
-                type="number"
-                min={1}
-                max={20}
-                value={form.meals}
-                onChange={(e) => {
-                  setMealsTouched(true)
-                  updateField('meals', Number(e.target.value))
-                }}
-                required
-              />
-              {errors.meals && <span className="field__error">{errors.meals}</span>}
-            </div>
-          </div>
-
-          <div className="field">
-            <label className="field__label" htmlFor="delivery_window">
-              Preferred delivery window
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="meals">
+              Meals needed
             </label>
             <select
-              id="delivery_window"
-              className="field__select"
-              value={form.delivery_window}
-              onChange={(e) => updateField('delivery_window', e.target.value as DeliveryWindow)}
+              id="meals"
+              className={`intake-field__input intake-field__select${errors.meals ? ' intake-field__input--error' : ''}`}
+              value={form.meals}
+              onChange={(e) => {
+                setMealsTouched(true)
+                updateField('meals', Number(e.target.value))
+              }}
               required
             >
-              {DELIVERY_WINDOW_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n} meal{n === 1 ? '' : 's'}
                 </option>
               ))}
             </select>
-          </div>
-        </section>
-
-        <section className="form-section" aria-labelledby="optional-heading">
-          <h3 id="optional-heading" className="form-section__title">
-            Optional <span className="optional-tag">— helps us serve you better</span>
-          </h3>
-
-          <div className="field-row field-row--2">
-            <div className="field">
-              <label className="field__label" htmlFor="frequency">
-                How often?
-              </label>
-              <select
-                id="frequency"
-                className="field__select"
-                value={form.frequency}
-                onChange={(e) =>
-                  updateField('frequency', e.target.value as DeliveryFrequency | '')
-                }
-              >
-                <option value="">Not sure yet</option>
-                {FREQUENCY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field">
-              <label className="field__label" htmlFor="contact_pref">
-                Contact preference
-              </label>
-              <select
-                id="contact_pref"
-                className="field__select"
-                value={form.contact_pref}
-                onChange={(e) =>
-                  updateField('contact_pref', e.target.value as ContactPref | '')
-                }
-              >
-                <option value="">No preference</option>
-                {CONTACT_PREF_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {errors.meals && <span className="intake-field__error">{errors.meals}</span>}
           </div>
 
-          <div className="field">
-            <label className="field__label" htmlFor="notes">
-              Notes
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="notes">
+              Allergies / restrictions
             </label>
             <textarea
               id="notes"
-              className="field__textarea"
-              rows={3}
+              className="intake-field__input intake-field__textarea"
+              rows={2}
               placeholder="Dietary needs, gate codes, or anything else we should know"
               value={form.notes}
               onChange={(e) => updateField('notes', e.target.value)}
@@ -402,10 +397,68 @@ export function IntakeForm({ onSuccess }: IntakeFormProps) {
           </div>
         </section>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? 'Submitting…' : 'Submit request'}
+        <section className="intake-section" aria-labelledby="frequency-heading">
+          <h2 id="frequency-heading" className="intake-section__title">
+            4. Frequency
+          </h2>
+
+          <fieldset className="intake-fieldset">
+            <legend className="sr-only">How often</legend>
+            <div className="intake-radio-list">
+              <label className="intake-radio">
+                <input
+                  type="radio"
+                  name="frequency"
+                  value=""
+                  checked={form.frequency === ''}
+                  onChange={() => updateField('frequency', '')}
+                />
+                <span>Not sure yet</span>
+              </label>
+              {FREQUENCY_OPTIONS.map((opt) => (
+                <label key={opt.value} className="intake-radio">
+                  <input
+                    type="radio"
+                    name="frequency"
+                    value={opt.value}
+                    checked={form.frequency === opt.value}
+                    onChange={() => updateField('frequency', opt.value)}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </section>
+
+        <section className="intake-section intake-section--consent">
+          <label className="intake-consent">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => {
+                setConsent(e.target.checked)
+                setErrors((prev) => ({ ...prev, consent: undefined }))
+              }}
+              required
+            />
+            <span>
+              I consent to receive delivery updates by text. I understand my information is shared
+              only with the Gurdwara coordinator and assigned sevadar for the purpose of this
+              delivery.
+            </span>
+          </label>
+          {errors.consent && <span className="intake-field__error">{errors.consent}</span>}
+        </section>
+
+        <div className="intake-form__actions">
+          <button type="submit" className="intake-form__submit" disabled={submitting}>
+            {submitting ? 'Submitting…' : 'Submit request for review'}
           </button>
+          <p className="intake-form__footnote">
+            A coordinator will review your request. You'll receive a text confirmation within 24
+            hours.
+          </p>
         </div>
       </form>
     </div>

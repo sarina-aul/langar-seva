@@ -32,9 +32,27 @@ export const BATCH_STAGE_LABELS: Record<BatchStatus, string> = {
   prep: 'Prep',
   cooking: 'Cooking',
   packing: 'Packing',
-  ready: 'Ready',
-  pickup: 'Pickup',
+  ready: 'Ready for pickup',
+  pickup: 'Pickup in progress',
   dispatched: 'Dispatched',
+}
+
+export const BATCH_STAGE_DESCRIPTIONS: Record<BatchStatus, string> = {
+  prep: 'Gathering ingredients and station setup',
+  cooking: 'Meals being prepared in the langar hall',
+  packing: 'Portioning and labeling meal containers',
+  ready: 'Meals plated and waiting for sevadars',
+  pickup: 'Sevadars are collecting meals',
+  dispatched: 'All meals are out for delivery',
+}
+
+export const BATCH_STAGE_NEXT_ACTION: Record<BatchStatus, string | null> = {
+  prep: 'Start cooking',
+  cooking: 'Start packing',
+  packing: 'Mark ready for pickup',
+  ready: 'Begin pickup window',
+  pickup: 'Mark all dispatched',
+  dispatched: null,
 }
 
 export interface BatchInsert {

@@ -1,10 +1,12 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { StaffLayout } from '../components/StaffLayout'
+import { type FormEvent, useEffect, useState } from 'react'
+import { StaffConsoleLayout } from '../components/StaffConsoleLayout'
 import { useAuth } from '../hooks/useAuth'
 import { isCoordinator } from '../lib/roles'
 import { getSupabase } from '../lib/supabase'
 import {
+  BATCH_STAGE_DESCRIPTIONS,
   BATCH_STAGE_LABELS,
+  BATCH_STAGE_NEXT_ACTION,
   BATCH_STAGES,
   type BatchInsert,
   type BatchRow,
@@ -12,10 +14,8 @@ import {
 } from '../types/database'
 import './KitchenPage.css'
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
 function todayIso(): string {
-  return new Date().toLocaleDateString('en-CA') // YYYY-MM-DD in local time
+  return new Date().toLocaleDateString('en-CA')
 }
 
 function nextStage(status: BatchStatus): BatchStatus | null {
@@ -28,7 +28,24 @@ function formatTime(iso: string | null): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+function stageTimestamp(batch: BatchRow, stage: BatchStatus): string | null {
+  switch (stage) {
+    case 'prep':
+      return batch.created_at
+    case 'cooking':
+      return batch.cooking_at
+    case 'packing':
+      return batch.packing_at
+    case 'ready':
+      return batch.ready_at
+    case 'pickup':
+      return batch.pickup_at
+    case 'dispatched':
+      return batch.dispatched_at
+    default:
+      return null
+  }
+}
 
 interface CreateBatchFormProps {
   onCreated: (batch: BatchRow) => void
@@ -73,24 +90,27 @@ function CreateBatchForm({ onCreated }: CreateBatchFormProps) {
   }
 
   return (
-    <div className="kitchen-card surface-card">
-      <h3 className="kitchen-card__title">Create tonight&apos;s batch</h3>
-      <p className="kitchen-card__subtitle">No batch has been created for today yet.</p>
+    <section className="kitchen-panel kitchen-panel--create">
+      <header className="kitchen-panel__header">
+        <p className="kitchen-panel__eyebrow">New batch</p>
+        <h2 className="kitchen-panel__title">Create tonight&apos;s batch</h2>
+        <p className="kitchen-panel__copy">No batch has been created for today yet.</p>
+      </header>
 
-      <form onSubmit={handleSubmit} noValidate>
+      <form className="kitchen-create-form" onSubmit={handleSubmit} noValidate>
         {error && (
-          <div className="form-error-banner" role="alert">
+          <div className="kitchen-alert kitchen-alert--error" role="alert">
             {error}
           </div>
         )}
 
-        <div className="field">
-          <label className="field__label" htmlFor="planned">
+        <div className="kitchen-field">
+          <label className="kitchen-field__label" htmlFor="planned">
             Planned meals
           </label>
           <input
             id="planned"
-            className="field__input"
+            className="kitchen-field__input"
             type="number"
             inputMode="numeric"
             min={1}
@@ -103,13 +123,13 @@ function CreateBatchForm({ onCreated }: CreateBatchFormProps) {
           />
         </div>
 
-        <div className="field">
-          <label className="field__label" htmlFor="batch-notes">
-            Notes <span className="optional-tag">— optional</span>
+        <div className="kitchen-field">
+          <label className="kitchen-field__label" htmlFor="batch-notes">
+            Notes <span className="kitchen-field__optional">optional</span>
           </label>
           <textarea
             id="batch-notes"
-            className="field__textarea"
+            className="kitchen-field__input kitchen-field__textarea"
             rows={2}
             placeholder="Tonight's menu or any special notes"
             value={notes}
@@ -118,39 +138,47 @@ function CreateBatchForm({ onCreated }: CreateBatchFormProps) {
           />
         </div>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create batch'}
-          </button>
-        </div>
+        <button type="submit" className="kitchen-btn kitchen-btn--primary" disabled={submitting}>
+          {submitting ? 'Creating…' : 'Create batch'}
+        </button>
       </form>
-    </div>
+    </section>
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface StageProgressProps {
+interface StageStepperProps {
   status: BatchStatus
 }
 
-function StageProgress({ status }: StageProgressProps) {
+function StageStepper({ status }: StageStepperProps) {
   const currentIdx = BATCH_STAGES.indexOf(status)
+
   return (
-    <ol className="stage-progress" aria-label="Batch stages">
+    <ol className="kitchen-stepper" aria-label="Batch stages">
       {BATCH_STAGES.map((stage, i) => {
         const done = i < currentIdx
         const active = i === currentIdx
         return (
-          <li
-            key={stage}
-            className={`stage-progress__step${done ? ' stage-progress__step--done' : ''}${active ? ' stage-progress__step--active' : ''}`}
-            aria-current={active ? 'step' : undefined}
-          >
-            <span className="stage-progress__dot" aria-hidden="true">
-              {done ? '✓' : i + 1}
-            </span>
-            <span className="stage-progress__label">{BATCH_STAGE_LABELS[stage]}</span>
+          <li key={stage} className="kitchen-stepper__item">
+            <div className="kitchen-stepper__node-wrap">
+              <span
+                className={`kitchen-stepper__node${done ? ' kitchen-stepper__node--done' : ''}${active ? ' kitchen-stepper__node--active' : ''}`}
+                aria-current={active ? 'step' : undefined}
+              >
+                {done ? '✓' : i + 1}
+              </span>
+              <span
+                className={`kitchen-stepper__label${active ? ' kitchen-stepper__label--active' : ''}${done ? ' kitchen-stepper__label--done' : ''}`}
+              >
+                {BATCH_STAGE_LABELS[stage]}
+              </span>
+            </div>
+            {i < BATCH_STAGES.length - 1 && (
+              <span
+                className={`kitchen-stepper__line${i < currentIdx ? ' kitchen-stepper__line--done' : ''}`}
+                aria-hidden="true"
+              />
+            )}
           </li>
         )
       })}
@@ -158,26 +186,25 @@ function StageProgress({ status }: StageProgressProps) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface MealCountEditorProps {
   batch: BatchRow
   onUpdated: (batch: BatchRow) => void
 }
 
 function MealCountEditor({ batch, onUpdated }: MealCountEditorProps) {
-  // Derive display value from batch directly; only allow local editing while focused
   const [localValue, setLocalValue] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
   const disabled = batch.status === 'dispatched'
 
-  const value = localValue ?? String(batch.meal_count_packed)
+  const packed = localValue !== null ? parseInt(localValue, 10) || 0 : batch.meal_count_packed
+  const progress = batch.meal_count_planned
+    ? Math.min(100, Math.round((packed / batch.meal_count_planned) * 100))
+    : 0
 
   async function handleBlur() {
     const next = parseInt(localValue ?? '', 10)
-    setLocalValue(null) // always revert local edit on blur
+    setLocalValue(null)
     if (isNaN(next) || next < 0) return
     if (next === batch.meal_count_packed) return
     setSaving(true)
@@ -196,28 +223,71 @@ function MealCountEditor({ batch, onUpdated }: MealCountEditorProps) {
     onUpdated(data as BatchRow)
   }
 
+  function bumpPacked(amount: number) {
+    const next = Math.min(batch.meal_count_planned, Math.max(0, packed + amount))
+    setLocalValue(String(next))
+    void (async () => {
+      setSaving(true)
+      setError(null)
+      const { data, error: dbError } = await getSupabase()
+        .from('batches')
+        .update({ meal_count_packed: next })
+        .eq('id', batch.id)
+        .select()
+        .single()
+      setSaving(false)
+      setLocalValue(null)
+      if (dbError) {
+        setError('Could not save packed count.')
+        return
+      }
+      onUpdated(data as BatchRow)
+    })()
+  }
+
   return (
-    <div className="meal-count">
-      <p className="meal-count__label">Meals packed</p>
-      <div className="meal-count__row">
+    <div className="kitchen-meals">
+      <div className="kitchen-meals__header">
+        <span className="kitchen-meals__label">Meals packed</span>
+        <span className="kitchen-meals__count">
+          {packed}
+          <span className="kitchen-meals__total">/ {batch.meal_count_planned}</span>
+        </span>
+      </div>
+      <div className="kitchen-meals__bar" aria-hidden="true">
+        <span className="kitchen-meals__bar-fill" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="kitchen-meals__row">
         <input
-          ref={inputRef}
-          className="meal-count__input"
+          className="kitchen-meals__input"
           type="number"
           inputMode="numeric"
           min={0}
           max={9999}
-          value={value}
+          value={localValue ?? String(batch.meal_count_packed)}
           onChange={(e) => setLocalValue(e.target.value)}
           onBlur={() => void handleBlur()}
           disabled={disabled || saving}
           aria-label="Meals packed"
         />
-        <span className="meal-count__of">/ {batch.meal_count_planned} planned</span>
-        {saving && <span className="meal-count__saving">Saving…</span>}
+        {batch.status === 'packing' && !disabled && (
+          <div className="kitchen-meals__quick">
+            <button type="button" className="kitchen-meals__quick-btn" onClick={() => bumpPacked(20)}>
+              +20 packed
+            </button>
+            <button
+              type="button"
+              className="kitchen-meals__quick-btn"
+              onClick={() => bumpPacked(batch.meal_count_planned - packed)}
+            >
+              All packed
+            </button>
+          </div>
+        )}
+        {saving && <span className="kitchen-meals__saving">Saving…</span>}
       </div>
       {error && (
-        <p className="meal-count__error" role="alert">
+        <p className="kitchen-meals__error" role="alert">
           {error}
         </p>
       )}
@@ -225,44 +295,33 @@ function MealCountEditor({ batch, onUpdated }: MealCountEditorProps) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface StageHistoryProps {
   batch: BatchRow
 }
 
-const STAGE_TS_KEYS: { stage: BatchStatus; key: keyof BatchRow; label: string }[] = [
-  { stage: 'cooking',    key: 'cooking_at',    label: 'Cooking started' },
-  { stage: 'packing',    key: 'packing_at',    label: 'Packing started' },
-  { stage: 'ready',      key: 'ready_at',      label: 'Marked ready' },
-  { stage: 'pickup',     key: 'pickup_at',     label: 'Pickup started' },
-  { stage: 'dispatched', key: 'dispatched_at', label: 'Dispatched' },
-]
-
 function StageHistory({ batch }: StageHistoryProps) {
-  const completed = STAGE_TS_KEYS.filter((s) => batch[s.key] !== null)
-  if (completed.length === 0) return null
+  const entries = BATCH_STAGES.map((stage) => ({
+    stage,
+    label: BATCH_STAGE_LABELS[stage],
+    time: formatTime(stageTimestamp(batch, stage)),
+  })).filter((entry) => entry.time)
+
+  if (entries.length === 0) return null
 
   return (
-    <div className="stage-history">
-      <h4 className="stage-history__title">Stage timeline</h4>
-      <ul className="stage-history__list">
-        <li className="stage-history__item">
-          <span className="stage-history__name">Prep started</span>
-          <span className="stage-history__time">{formatTime(batch.created_at)}</span>
-        </li>
-        {completed.map(({ key, label }) => (
-          <li key={key} className="stage-history__item">
-            <span className="stage-history__name">{label}</span>
-            <span className="stage-history__time">{formatTime(batch[key] as string)}</span>
+    <section className="kitchen-timeline">
+      <h3 className="kitchen-timeline__title">Stage timeline</h3>
+      <ul className="kitchen-timeline__list">
+        {entries.map((entry) => (
+          <li key={entry.stage} className="kitchen-timeline__item">
+            <span className="kitchen-timeline__name">{entry.label}</span>
+            <span className="kitchen-timeline__time">{entry.time}</span>
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   )
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface BatchViewProps {
   batch: BatchRow
@@ -297,63 +356,111 @@ function BatchView({ batch, onBatchUpdated }: BatchViewProps) {
     onBatchUpdated(data as BatchRow)
   }
 
+  const nextAction = next ? BATCH_STAGE_NEXT_ACTION[batch.status] : null
+
   return (
-    <div className="kitchen-batch">
-      <div className="kitchen-card kitchen-card--stage surface-card">
-        <div className="stage-header">
-          <div>
-            <p className="stage-header__label">Current stage</p>
-            <h3 className="stage-header__stage">{BATCH_STAGE_LABELS[batch.status]}</h3>
-          </div>
-          {batch.status === 'dispatched' ? (
-            <div className="stage-complete-badge">Batch complete</div>
-          ) : (
-            <div className="stage-actions">
-              {warnPackedShort && (
-                <p className="stage-warn" role="alert">
-                  {batch.meal_count_packed}/{batch.meal_count_planned} packed — advance anyway?
-                </p>
-              )}
-              {next && (
-                <button
-                  type="button"
-                  className="btn-primary stage-advance-btn"
-                  onClick={() => void handleAdvance()}
-                  disabled={advancing}
-                >
-                  {advancing
-                    ? 'Advancing…'
-                    : `Advance to ${BATCH_STAGE_LABELS[next]}`}
-                </button>
-              )}
+    <section className="kitchen-panel kitchen-panel--batch">
+      <header className="kitchen-panel__header kitchen-panel__header--batch">
+        <div>
+          <p className="kitchen-panel__eyebrow">Today&apos;s meal batch</p>
+          <h2 className="kitchen-panel__title kitchen-panel__title--batch">
+            {batch.notes?.trim() || 'Tonight\'s langar'}
+          </h2>
+          <p className="kitchen-panel__copy">
+            {batch.meal_count_planned} meals for tonight&apos;s seva
+          </p>
+        </div>
+        <div className="kitchen-panel__stat">
+          <p className="kitchen-panel__stat-label">Planned</p>
+          <p className="kitchen-panel__stat-value">{batch.meal_count_planned}</p>
+        </div>
+      </header>
+
+      <StageStepper status={batch.status} />
+
+      <div className="kitchen-stage-card">
+        <div className="kitchen-stage-card__icon" aria-hidden="true">
+          {batch.status === 'dispatched' ? '✓' : '◆'}
+        </div>
+        <div className="kitchen-stage-card__body">
+          <p className="kitchen-stage-card__eyebrow">Current stage</p>
+          <h3 className="kitchen-stage-card__title">{BATCH_STAGE_LABELS[batch.status]}</h3>
+          <p className="kitchen-stage-card__copy">{BATCH_STAGE_DESCRIPTIONS[batch.status]}</p>
+
+          {(batch.status === 'packing' || batch.status === 'pickup') && (
+            <MealCountEditor batch={batch} onUpdated={onBatchUpdated} />
+          )}
+
+          {batch.status !== 'packing' && batch.status !== 'pickup' && batch.status !== 'dispatched' && (
+            <p className="kitchen-stage-card__meta">
+              {batch.meal_count_packed} of {batch.meal_count_planned} packed
+            </p>
+          )}
+
+          {warnPackedShort && (
+            <p className="kitchen-alert kitchen-alert--warn" role="alert">
+              {batch.meal_count_packed}/{batch.meal_count_planned} packed — advance anyway?
+            </p>
+          )}
+
+          {advanceError && (
+            <div className="kitchen-alert kitchen-alert--error" role="alert">
+              {advanceError}
             </div>
           )}
+
+          {batch.status === 'dispatched' ? (
+            <div className="kitchen-complete">
+              <span aria-hidden="true">✓</span>
+              Tonight&apos;s seva complete
+            </div>
+          ) : (
+            nextAction &&
+            next && (
+              <button
+                type="button"
+                className="kitchen-btn kitchen-btn--primary kitchen-btn--advance"
+                onClick={() => void handleAdvance()}
+                disabled={advancing}
+              >
+                {advancing ? 'Advancing…' : `${nextAction} →`}
+              </button>
+            )
+          )}
+
+          {(batch.status === 'ready' || batch.status === 'pickup' || batch.status === 'dispatched') && (
+            <p className="kitchen-stage-card__notify">
+              <span aria-hidden="true">✓</span> Coordinator notified • Sevadars alerted
+            </p>
+          )}
         </div>
-
-        {advanceError && (
-          <div className="form-error-banner" role="alert">
-            {advanceError}
-          </div>
-        )}
-
-        <StageProgress status={batch.status} />
       </div>
 
-      <MealCountEditor batch={batch} onUpdated={onBatchUpdated} />
-
-      {batch.notes && (
-        <div className="kitchen-card kitchen-notes surface-card">
-          <p className="kitchen-notes__label">Notes</p>
-          <p className="kitchen-notes__text">{batch.notes}</p>
-        </div>
+      {batch.status !== 'packing' && batch.status !== 'pickup' && (
+        <MealCountEditor batch={batch} onUpdated={onBatchUpdated} />
       )}
 
+      <footer className="kitchen-panel__footer">
+        <div className="kitchen-panel__footer-stat">
+          <p className="kitchen-panel__footer-label">Total packages</p>
+          <p className="kitchen-panel__footer-value">{batch.meal_count_planned}</p>
+        </div>
+        <div className="kitchen-panel__footer-stat">
+          <p className="kitchen-panel__footer-label">Packed</p>
+          <p className="kitchen-panel__footer-value">{batch.meal_count_packed}</p>
+        </div>
+        <div className="kitchen-panel__footer-stat">
+          <p className="kitchen-panel__footer-label">Stage</p>
+          <p className="kitchen-panel__footer-value kitchen-panel__footer-value--sm">
+            {BATCH_STAGE_LABELS[batch.status]}
+          </p>
+        </div>
+      </footer>
+
       <StageHistory batch={batch} />
-    </div>
+    </section>
   )
 }
-
-// ─── Main page ───────────────────────────────────────────────────────────────
 
 export function KitchenPage() {
   const { user } = useAuth()
@@ -383,27 +490,33 @@ export function KitchenPage() {
       setLoading(false)
     }
     void loadBatch()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+    }
   }, [])
 
+  const dateLabel = new Date().toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+
   return (
-    <StaffLayout
-      title="Kitchen"
-      subtitle={new Date().toLocaleDateString([], {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-      })}
+    <StaffConsoleLayout
+      title="Kitchen Operations"
+      subtitle={dateLabel}
       backTo="/staff"
+      backLabel="Dashboard"
+      stepLabel="Step 02 · Prepare"
     >
       {loading && (
-        <div className="kitchen-loading surface-card" role="status">
+        <div className="kitchen-state kitchen-state--loading" role="status">
           <p>Loading tonight&apos;s batch…</p>
         </div>
       )}
 
       {!loading && fetchError && (
-        <div className="form-error-banner" role="alert">
+        <div className="kitchen-alert kitchen-alert--error" role="alert">
           {fetchError}
         </div>
       )}
@@ -417,13 +530,11 @@ export function KitchenPage() {
       )}
 
       {!loading && !fetchError && !batch && !coordinator && (
-        <div className="kitchen-card kitchen-empty surface-card">
-          <p className="kitchen-empty__text">No batch has been created for tonight yet.</p>
-          <p className="kitchen-empty__sub">
-            A coordinator will create it before service begins.
-          </p>
-        </div>
+        <section className="kitchen-state kitchen-state--empty">
+          <p className="kitchen-state__title">No batch for tonight yet</p>
+          <p className="kitchen-state__copy">A coordinator will create it before service begins.</p>
+        </section>
       )}
-    </StaffLayout>
+    </StaffConsoleLayout>
   )
 }
