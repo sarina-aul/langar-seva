@@ -344,6 +344,15 @@ Phase 6: Driver route page
 - Add delivery status per stop.
 - Add emergency cancellation flow after pickup.
 
+Phase 7: Privacy-preserving client tracking
+
+- Send each recipient a private SMS tracking link for their own delivery stop.
+- Show package-style progress and an ETA window, not a live driver pin.
+- Update client status from driver/coordinator stop updates: picked up, on the way, nearby, delivered, delayed, unable to complete.
+- Use tokenized access through a redacted tracking endpoint; never expose raw route tables to anonymous clients.
+- Do not show driver home address, driver home postal area, full route, other recipient addresses, exact GPS, or sevadar phone details on the client tracking page.
+- Expire or revoke tracking links after the delivery day.
+
 ## Files Likely To Change
 
 Schema and types:
@@ -359,6 +368,9 @@ Frontend:
 - [`web/src/pages/DispatchPage.css`](../web/src/pages/DispatchPage.css)
 - [`web/src/pages/RecipientsPage.tsx`](../web/src/pages/RecipientsPage.tsx)
 - [`web/src/components/IntakeForm.tsx`](../web/src/components/IntakeForm.tsx)
+- `web/src/pages/DriverRoutePage.tsx`
+- `web/src/pages/TrackingPage.tsx`
+- `supabase/functions/send-delivery-tracking-sms/index.ts`
 
 New likely files:
 
@@ -412,6 +424,9 @@ Integration tests or manual QA:
 - Generate routes with missing recipient postal code.
 - Cancel one assigned route before pickup and approve rebalance.
 - Confirm existing dispatch status transitions still work.
+- Confirm tracking links reveal only the matching stop's redacted status and ETA.
+- Confirm expired, revoked, or invalid tracking tokens return no delivery data.
+- Confirm anonymous users cannot read recipients, sevadars, raw routes, or other route stops.
 
 ## Recommended First Build Slice
 
