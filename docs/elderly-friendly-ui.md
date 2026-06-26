@@ -2,6 +2,16 @@
 
 Guidance for making the recipient-facing experience accessible to elderly users. The current web intake flow is polished but assumes comfort with mobile browsers, typing, and English — barriers for many seniors in this community.
 
+## Tracker
+
+| Item | GitHub |
+|------|--------|
+| **Epic** | [#16 — Elderly-friendly recipient experience](https://github.com/sarina-aul/langar-seva/issues/16) |
+| Phone-first intake | [#12](https://github.com/sarina-aul/langar-seva/issues/12) |
+| Plain-language SMS status | [#13](https://github.com/sarina-aul/langar-seva/issues/13) |
+| Recipient UI translations | [#14](https://github.com/sarina-aul/langar-seva/issues/14) |
+| Intake accessibility pass | [#15](https://github.com/sarina-aul/langar-seva/issues/15) |
+
 ## What works well for older adults
 
 | Principle | What it means |
