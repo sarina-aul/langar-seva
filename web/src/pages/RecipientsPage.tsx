@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { StaffLayout } from '../components/StaffLayout'
+import { StaffConsoleLayout } from '../components/StaffConsoleLayout'
 import {
   CONTACT_PREF_LABELS,
   DELIVERY_WINDOW_LABELS,
@@ -44,16 +44,17 @@ function RecipientCard({ recipient, savingId, onApprove, onReject }: RecipientCa
   const isSaving = savingId === recipient.id
 
   return (
-    <article className="recipient-card surface-card">
+    <article className="recipient-card">
       <div className="recipient-card__header">
         <div>
+          <p className="recipient-card__eyebrow">Recipient request</p>
           <h3 className="recipient-card__name">{recipient.name}</h3>
           <p className="recipient-card__meta">
             {recipient.phone} · Submitted {formatSubmittedDate(recipient.created_at)}
           </p>
         </div>
-        <span className={`status-pill status-pill--${recipient.status}`}>
-          <span className="status-pill__dot" aria-hidden="true" />
+        <span className={`recipient-card__status recipient-card__status--${recipient.status}`}>
+          <span className="recipient-card__status-dot" aria-hidden="true" />
           {RECIPIENT_STATUS_LABELS[recipient.status]}
         </span>
       </div>
@@ -102,7 +103,7 @@ function RecipientCard({ recipient, savingId, onApprove, onReject }: RecipientCa
         <div className="recipient-card__actions">
           <button
             type="button"
-            className="btn-primary btn-primary--inline recipient-card__approve"
+            className="recipient-card__button recipient-card__button--approve"
             disabled={isSaving}
             onClick={() => onApprove(recipient.id)}
           >
@@ -110,7 +111,7 @@ function RecipientCard({ recipient, savingId, onApprove, onReject }: RecipientCa
           </button>
           <button
             type="button"
-            className="btn-secondary recipient-card__reject"
+            className="recipient-card__button recipient-card__button--reject"
             disabled={isSaving}
             onClick={() => onReject(recipient.id)}
           >
@@ -155,12 +156,18 @@ export function RecipientsPage() {
   }, [filter])
 
   useEffect(() => {
-    void fetchRecipients()
+    queueMicrotask(() => {
+      void fetchRecipients()
+    })
   }, [fetchRecipients])
 
   useEffect(() => {
+    const channelId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
     const channel = getSupabase()
-      .channel('recipients_list')
+      .channel(`recipients_list:${filter}:${channelId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'recipients' },
@@ -231,13 +238,59 @@ export function RecipientsPage() {
     void updateStatus(id, 'rejected')
   }
 
+  const counts = recipients.reduce(
+    (acc, recipient) => {
+      acc.all += 1
+      acc[recipient.status] += 1
+      return acc
+    },
+    {
+      all: 0,
+      pending: 0,
+      approved: 0,
+      active: 0,
+      paused: 0,
+      rejected: 0,
+    } as Record<RecipientStatus | 'all', number>,
+  )
+
   return (
-    <StaffLayout
-      title="Recipients"
-      subtitle="Review and approve langar requests"
+    <StaffConsoleLayout
+      title="Coordinator Console"
+      subtitle="Review recipient requests, approve households, and prepare delivery intake."
       backTo="/staff"
+      stepLabel="Step 03 · Dispatch"
     >
-      <nav className="recipients-tabs" aria-label="Filter by status">
+      <section className="recipients-overview" aria-label="Recipient request summary">
+        <div className="recipients-overview__item">
+          <p className="recipients-overview__label">Current view</p>
+          <p className="recipients-overview__value">{FILTER_TABS.find((tab) => tab.value === filter)?.label}</p>
+        </div>
+        <div className="recipients-overview__item">
+          <p className="recipients-overview__label">Pending</p>
+          <p className="recipients-overview__value">{filter === 'pending' ? recipients.length : counts.pending}</p>
+        </div>
+        <div className="recipients-overview__item">
+          <p className="recipients-overview__label">Visible requests</p>
+          <p className="recipients-overview__value">{recipients.length}</p>
+        </div>
+      </section>
+
+      <section className="recipients-panel" aria-labelledby="recipients-heading">
+        <div className="recipients-panel__header">
+          <div>
+            <p className="recipients-panel__eyebrow">Recipient intake</p>
+            <h2 id="recipients-heading" className="recipients-panel__title">
+              Requests for review
+            </h2>
+            <p className="recipients-panel__copy">
+              Approve households for tonight&apos;s langar delivery or reject requests that cannot be served.
+            </p>
+          </div>
+          <span className="recipients-panel__count">{recipients.length} shown</span>
+        </div>
+
+        <nav className="recipients-tabs" aria-label="Filter by status">
           {FILTER_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -252,25 +305,25 @@ export function RecipientsPage() {
         </nav>
 
         {fetchError && (
-          <div className="form-error-banner" role="alert">
+          <div className="recipients-alert recipients-alert--error" role="alert">
             {fetchError}
           </div>
         )}
 
         {actionError && (
-          <div className="form-error-banner" role="alert">
+          <div className="recipients-alert recipients-alert--error" role="alert">
             {actionError}
           </div>
         )}
 
         {loading && (
-          <div className="recipients-loading surface-card" role="status">
+          <div className="recipients-loading" role="status">
             <p>Loading recipients…</p>
           </div>
         )}
 
         {!loading && !fetchError && recipients.length === 0 && (
-          <div className="recipients-empty surface-card">
+          <div className="recipients-empty">
             <p>{EMPTY_MESSAGES[filter]}</p>
           </div>
         )}
@@ -289,6 +342,7 @@ export function RecipientsPage() {
             ))}
           </ul>
         )}
-    </StaffLayout>
+      </section>
+    </StaffConsoleLayout>
   )
 }

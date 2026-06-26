@@ -59,21 +59,21 @@ export function useBatchReadyNotification(
   )
 
   useEffect(() => {
-    let mounted = true
-    setLoading(true)
-
-    void fetchUnread().then(() => {
-      if (!mounted) return
+    queueMicrotask(() => {
+      setLoading(true)
+      void fetchUnread()
     })
 
     if (!user || !coordinator) {
-      return () => {
-        mounted = false
-      }
+      return
     }
 
+    const channelId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
     const channel = getSupabase()
-      .channel(`staff_notifications:${user.id}`)
+      .channel(`staff_notifications:${user.id}:${channelId}`)
       .on(
         'postgres_changes',
         {
@@ -107,7 +107,6 @@ export function useBatchReadyNotification(
       .subscribe()
 
     return () => {
-      mounted = false
       void getSupabase().removeChannel(channel)
     }
   }, [user, coordinator, fetchUnread])

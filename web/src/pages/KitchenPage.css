@@ -277,6 +277,220 @@
   text-transform: uppercase;
 }
 
+/* ─── Prep readiness ─────────────────────────────────────────────────────── */
+
+.kitchen-prep {
+  margin-top: 1.25rem;
+  border: 1px solid var(--color-hairline);
+  background: rgba(240, 235, 225, 0.3);
+}
+
+.kitchen-prep__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.kitchen-prep__eyebrow,
+.kitchen-prep__status,
+.kitchen-prep__details dt,
+.kitchen-prep__notes p,
+.kitchen-prep__future p {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kitchen-prep__eyebrow {
+  color: rgba(15, 26, 46, 0.45);
+}
+
+.kitchen-prep__title {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--color-ink);
+}
+
+.kitchen-prep__status {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #fde68a;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.kitchen-prep__status--ready {
+  border-color: rgba(22, 163, 74, 0.25);
+  background: rgba(22, 163, 74, 0.1);
+  color: #166534;
+}
+
+.kitchen-prep__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--color-hairline);
+}
+
+.kitchen-prep__details div {
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.kitchen-prep__details dt,
+.kitchen-prep__notes p,
+.kitchen-prep__future p {
+  color: rgba(15, 26, 46, 0.45);
+}
+
+.kitchen-prep__details dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: rgba(15, 26, 46, 0.72);
+}
+
+.kitchen-prep__notes,
+.kitchen-prep__future {
+  padding: 0.9rem 1rem;
+  border-top: 1px solid var(--color-hairline);
+}
+
+.kitchen-prep__notes span,
+.kitchen-prep__future span {
+  display: block;
+  margin-top: 0.25rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: rgba(15, 26, 46, 0.62);
+}
+
+.kitchen-prep__checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--color-hairline);
+  background: var(--color-hairline);
+}
+
+.kitchen-prep-check {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.65);
+  cursor: pointer;
+}
+
+.kitchen-prep-check input {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.2rem;
+  accent-color: var(--color-ink);
+}
+
+.kitchen-prep-check span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.kitchen-prep-check strong {
+  color: var(--color-ink);
+}
+
+.kitchen-prep-check small {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: rgba(15, 26, 46, 0.62);
+  line-height: 1.35;
+}
+
+/* ─── Cooking progress ───────────────────────────────────────────────────── */
+
+.kitchen-cooking {
+  margin-top: 1.25rem;
+  border: 1px solid var(--color-hairline);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.kitchen-cooking__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.kitchen-cooking__eyebrow,
+.kitchen-cooking__timer small,
+.kitchen-cooking__details dt {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kitchen-cooking__eyebrow,
+.kitchen-cooking__details dt {
+  color: rgba(15, 26, 46, 0.45);
+}
+
+.kitchen-cooking__title {
+  margin-top: 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--color-ink);
+}
+
+.kitchen-cooking__timer {
+  min-width: 6rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(224, 123, 0, 0.28);
+  background: rgba(224, 123, 0, 0.08);
+  text-align: right;
+}
+
+.kitchen-cooking__timer span {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--color-ink);
+}
+
+.kitchen-cooking__timer small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-kesari-dark);
+}
+
+.kitchen-cooking__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--color-hairline);
+}
+
+.kitchen-cooking__details div {
+  padding: 0.9rem 1rem;
+  background: rgba(240, 235, 225, 0.35);
+}
+
+.kitchen-cooking__details dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: rgba(15, 26, 46, 0.72);
+}
+
 /* ─── Meals packed ───────────────────────────────────────────────────────── */
 
 .kitchen-meals {
@@ -461,6 +675,12 @@
   gap: 0.45rem;
 }
 
+.kitchen-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .kitchen-field__label {
   font-family: var(--font-mono);
   font-size: 0.625rem;
@@ -550,6 +770,87 @@
   border: 1px solid #fde68a;
   background: #fef3c7;
   color: #92400e;
+}
+
+.kitchen-short-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  color: #78350f;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kitchen-short-reason textarea {
+  width: 100%;
+  padding: 0.65rem;
+  border: 1px solid #fde68a;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  letter-spacing: 0;
+  text-transform: none;
+  resize: vertical;
+}
+
+.kitchen-pickup-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 clamp(1rem, 3vw, 1.5rem) 1.5rem;
+  border: 1px solid var(--color-hairline);
+  background: var(--color-hairline);
+}
+
+.kitchen-pickup-details > div {
+  padding: 1.1rem 1.25rem;
+  background: rgba(240, 235, 225, 0.35);
+}
+
+.kitchen-pickup-details__label {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(15, 26, 46, 0.45);
+}
+
+.kitchen-pickup-details__value {
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--color-ink);
+}
+
+.kitchen-pickup-details__sub {
+  margin-top: 0.3rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: rgba(15, 26, 46, 0.65);
+}
+
+@media (max-width: 640px) {
+  .kitchen-prep__details,
+  .kitchen-prep__checks,
+  .kitchen-cooking__details,
+  .kitchen-field-grid,
+  .kitchen-pickup-details,
+  .kitchen-panel__footer {
+    grid-template-columns: 1fr;
+  }
+
+  .kitchen-cooking__header {
+    flex-direction: column;
+  }
+
+  .kitchen-cooking__timer {
+    width: 100%;
+    text-align: left;
+  }
 }
 
 /* ─── Empty / loading ────────────────────────────────────────────────────── */

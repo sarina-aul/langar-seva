@@ -18,6 +18,14 @@ export type ContactPref = 'phone' | 'text' | 'either'
 // ─── Kitchen batch ────────────────────────────────────────────────────────────
 
 export type BatchStatus = 'prep' | 'cooking' | 'packing' | 'ready' | 'pickup' | 'dispatched'
+export type DispatchRouteStatus = 'planned' | 'assigned' | 'picked_up' | 'completed' | 'cancelled'
+export type BatchAuditEventType =
+  | 'stage_changed'
+  | 'packed_count_changed'
+  | 'short_count_reason_set'
+  | 'batch_plan_changed'
+  | 'route_created'
+  | 'route_status_changed'
 
 export const BATCH_STAGES: BatchStatus[] = [
   'prep',
@@ -42,7 +50,7 @@ export const BATCH_STAGE_DESCRIPTIONS: Record<BatchStatus, string> = {
   cooking: 'Meals being prepared in the langar hall',
   packing: 'Portioning and labeling meal containers',
   ready: 'Meals plated and waiting for sevadars',
-  pickup: 'Sevadars are collecting meals',
+  pickup: 'Pickup window is open and sevadars are collecting route bundles',
   dispatched: 'All meals are out for delivery',
 }
 
@@ -59,6 +67,15 @@ export interface BatchInsert {
   batch_date: string // 'YYYY-MM-DD'
   meal_count_planned: number
   meal_count_packed?: number
+  menu?: string
+  pickup_window_start?: string | null
+  pickup_window_end?: string | null
+  service_location_name?: string
+  service_location_address?: string | null
+  short_count_reason?: string | null
+  ingredients_confirmed_at?: string | null
+  stations_confirmed_at?: string | null
+  prep_confirmed_by?: string | null
   notes?: string | null
   status?: BatchStatus
 }
@@ -71,13 +88,88 @@ export interface BatchRow {
   status: BatchStatus
   meal_count_planned: number
   meal_count_packed: number
+  menu: string
+  pickup_window_start: string | null
+  pickup_window_end: string | null
+  service_location_name: string
+  service_location_address: string | null
+  short_count_reason: string | null
+  ingredients_confirmed_at: string | null
+  stations_confirmed_at: string | null
+  prep_confirmed_by: string | null
   notes: string | null
   created_by: string | null
   cooking_at: string | null
   packing_at: string | null
   ready_at: string | null
   pickup_at: string | null
+  pickup_opened_at: string | null
   dispatched_at: string | null
+}
+
+export interface SevadarInsert {
+  name: string
+  phone?: string | null
+  notes?: string | null
+  active?: boolean
+}
+
+export interface SevadarRow extends SevadarInsert {
+  id: string
+  created_at: string
+  updated_at: string
+  name: string
+  phone: string | null
+  notes: string | null
+  active: boolean
+}
+
+export interface DispatchRouteInsert {
+  batch_id: string
+  sevadar_id?: string | null
+  route_name: string
+  status?: DispatchRouteStatus
+  notes?: string | null
+}
+
+export interface DispatchRouteRow extends DispatchRouteInsert {
+  id: string
+  created_at: string
+  updated_at: string
+  batch_id: string
+  sevadar_id: string | null
+  route_name: string
+  status: DispatchRouteStatus
+  pickup_at: string | null
+  completed_at: string | null
+  notes: string | null
+}
+
+export interface DispatchRouteRecipientInsert {
+  route_id: string
+  recipient_id: string
+  stop_order?: number
+  meals: number
+}
+
+export interface DispatchRouteRecipientRow extends DispatchRouteRecipientInsert {
+  id: string
+  created_at: string
+  route_id: string
+  recipient_id: string
+  stop_order: number
+  meals: number
+}
+
+export interface BatchAuditEventRow {
+  id: string
+  created_at: string
+  batch_id: string
+  actor_user_id: string | null
+  event_type: BatchAuditEventType
+  from_value: string | null
+  to_value: string | null
+  note: string | null
 }
 
 // ─── Staff notifications ──────────────────────────────────────────────────────
@@ -136,6 +228,30 @@ export interface Database {
         Update: Partial<BatchInsert> & { status?: BatchStatus; meal_count_packed?: number }
         Relationships: []
       }
+      sevadars: {
+        Row: SevadarRow
+        Insert: SevadarInsert
+        Update: Partial<SevadarInsert>
+        Relationships: []
+      }
+      dispatch_routes: {
+        Row: DispatchRouteRow
+        Insert: DispatchRouteInsert
+        Update: Partial<DispatchRouteInsert> & { status?: DispatchRouteStatus }
+        Relationships: []
+      }
+      dispatch_route_recipients: {
+        Row: DispatchRouteRecipientRow
+        Insert: DispatchRouteRecipientInsert
+        Update: Partial<DispatchRouteRecipientInsert>
+        Relationships: []
+      }
+      batch_audit_events: {
+        Row: BatchAuditEventRow
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       staff_notifications: {
         Row: StaffNotificationRow
         Insert: never
@@ -156,6 +272,7 @@ export interface Database {
       delivery_frequency: DeliveryFrequency
       contact_pref: ContactPref
       batch_status: BatchStatus
+      dispatch_route_status: DispatchRouteStatus
     }
     CompositeTypes: Record<string, never>
   }

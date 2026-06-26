@@ -25,6 +25,14 @@ export function StaffNav() {
       ) : (
         <span className="staff-nav__item staff-nav__item--disabled">Recipients</span>
       )}
+      {coordinator && (
+        <Link
+          to="/staff/dispatch"
+          className={`staff-nav__item staff-nav__item--link${location.pathname === '/staff/dispatch' ? ' staff-nav__item--active' : ''}`}
+        >
+          Dispatch
+        </Link>
+      )}
       <Link
         to="/staff/kitchen"
         className={`staff-nav__item staff-nav__item--link${location.pathname === '/staff/kitchen' ? ' staff-nav__item--active' : ''}`}

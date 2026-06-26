@@ -68,6 +68,8 @@ function validate(data: IntakeFormData, consent: boolean): FieldErrors {
   }
   if (data.meals < 1 || data.meals > 20) {
     errors.meals = 'Number of meals must be between 1 and 20.'
+  } else if (data.meals > data.household_size) {
+    errors.meals = 'Meals requested cannot be more than household size.'
   }
   if (!consent) {
     errors.consent = 'Please provide consent to proceed.'
@@ -112,6 +114,8 @@ export function IntakeForm({ onSuccess, onBack }: IntakeFormProps) {
       const next = { ...prev, [key]: value }
 
       if (key === 'household_size' && !mealsTouched) {
+        next.meals = value as number
+      } else if (key === 'household_size' && next.meals > (value as number)) {
         next.meals = value as number
       }
 
@@ -373,7 +377,7 @@ export function IntakeForm({ onSuccess, onBack }: IntakeFormProps) {
               }}
               required
             >
-              {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+              {Array.from({ length: form.household_size }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
                   {n} meal{n === 1 ? '' : 's'}
                 </option>

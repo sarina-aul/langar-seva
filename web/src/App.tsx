@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import { Confirmation } from './components/Confirmation'
 import { IntakeForm } from './components/IntakeForm'
 import { RecipientHome } from './components/RecipientHome'
@@ -7,6 +7,7 @@ import { RecipientLayout } from './components/RecipientLayout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
+import { DispatchPage } from './pages/DispatchPage'
 import { RecipientsPage } from './pages/RecipientsPage'
 import { StaffHome } from './pages/StaffHome'
 import type { RecipientRow } from './types/database'
@@ -43,6 +44,7 @@ function App() {
     <Routes>
       <Route path="/" element={<IntakePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/staff/login" element={<Navigate to="/login" replace />} />
       <Route
         path="/staff"
         element={
@@ -64,6 +66,14 @@ function App() {
         element={
           <ProtectedRoute requiredRole="coordinator">
             <RecipientsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/dispatch"
+        element={
+          <ProtectedRoute requiredRole="coordinator">
+            <DispatchPage />
           </ProtectedRoute>
         }
       />

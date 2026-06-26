@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ReadyNotificationBanner } from '../components/ReadyNotificationBanner'
-import { StaffLayout } from '../components/StaffLayout'
+import { StaffConsoleLayout } from '../components/StaffConsoleLayout'
 import { useAuth } from '../hooks/useAuth'
 import { useBatchReadyNotification } from '../hooks/useBatchReadyNotification'
 import { usePendingRecipientCount } from '../hooks/usePendingRecipientCount'
@@ -17,10 +17,53 @@ export function StaffHome() {
   const roleLabel =
     role === 'coordinator' ? 'Coordinator' : role === 'kitchen_admin' ? 'Kitchen admin' : 'Staff'
 
+  const consoles = coordinator
+    ? [
+        {
+          step: '01',
+          stepLabel: 'Dispatch',
+          title: 'Recipient Review',
+          body: "Review pending requests, approve households, and keep tonight's delivery list ready.",
+          path: '/staff/recipients',
+          cta: `Review recipients${pendingCount !== null && pendingCount > 0 ? ` (${pendingCount} pending)` : ''}`,
+        },
+        {
+          step: '02',
+          stepLabel: 'Prepare',
+          title: 'Kitchen Operations',
+          body: 'Track prep, cooking, packing, and readiness for pickup.',
+          path: '/staff/kitchen',
+          cta: 'Open kitchen',
+        },
+        {
+          step: '03',
+          stepLabel: 'Dispatch',
+          title: 'Route Bundles',
+          body: 'Assign approved recipients to sevadars and open the pickup window.',
+          path: '/staff/dispatch',
+          cta: 'Start dispatch',
+        },
+      ]
+    : [
+        {
+          step: '02',
+          stepLabel: 'Prepare',
+          title: "Tonight's kitchen batch",
+          body: "Track prep, cooking, packing, and dispatch for tonight's langar.",
+          path: '/staff/kitchen',
+          cta: 'Open kitchen',
+        },
+      ]
+
   return (
-    <StaffLayout
-      title="Staff dashboard"
-      subtitle={`Signed in as ${user?.email ?? 'staff'} · ${roleLabel}`}
+    <StaffConsoleLayout
+      title="Staff Dashboard"
+      subtitle={`${roleLabel} portal · ${new Date().toLocaleDateString([], {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })}`}
+      stepLabel="Langar operations"
     >
       {coordinator && notification && (
         <ReadyNotificationBanner
@@ -30,27 +73,55 @@ export function StaffHome() {
         />
       )}
 
-      <div className="staff-home__placeholder surface-card">
-        <h3 className="staff-home__placeholder-title">
-          {coordinator ? 'Coordinator dashboard' : "Tonight's kitchen batch"}
-        </h3>
-        <p className="staff-home__placeholder-text">
-          {coordinator
-            ? "Review pending requests and you'll be alerted when tonight's batch is ready for delivery."
-            : 'Track prep, cooking, packing, and dispatch for tonight\'s langar.'}
+      <section className="staff-home__overview" aria-label="Operations overview">
+        <div className="staff-home__stat">
+          <p className="staff-home__stat-label">Role</p>
+          <p className="staff-home__stat-value">{roleLabel}</p>
+        </div>
+        <div className="staff-home__stat">
+          <p className="staff-home__stat-label">Pending requests</p>
+          <p className="staff-home__stat-value">
+            {coordinator ? (pendingCount ?? '—') : '—'}
+          </p>
+        </div>
+        <div className="staff-home__stat">
+          <p className="staff-home__stat-label">Next stage</p>
+          <p className="staff-home__stat-value staff-home__stat-value--small">
+            {coordinator ? 'Dispatch' : 'Prepare'}
+          </p>
+        </div>
+      </section>
+
+      <section className="staff-home__workflow" aria-labelledby="workflow-heading">
+        <div className="staff-home__section-header">
+          <h2 id="workflow-heading" className="staff-home__section-title">
+            Workflow
+          </h2>
+          <p className="staff-home__section-kicker">Plan → Prepare → Dispatch</p>
+        </div>
+        <p className="staff-home__section-copy">
+          Each console handles a stage of the langar seva cycle.
         </p>
-        {coordinator && (
-          <Link to="/staff/recipients" className="btn-primary btn-primary--inline staff-home__cta">
-            Review recipients
-            {pendingCount !== null && pendingCount > 0 ? ` (${pendingCount} pending)` : ''}
-          </Link>
-        )}
-        {!coordinator && (
-          <Link to="/staff/kitchen" className="btn-primary btn-primary--inline staff-home__cta">
-            Go to kitchen dashboard
-          </Link>
-        )}
-      </div>
-    </StaffLayout>
+
+        <div className="staff-home__cards">
+          {consoles.map((console) => (
+            <Link key={console.path} to={console.path} className="staff-home__card">
+              <div className="staff-home__card-strip">
+                <span>Step {console.step}</span>
+                <span>{console.stepLabel}</span>
+              </div>
+              <div className="staff-home__card-body">
+                <div className="staff-home__card-icon" aria-hidden="true">
+                  {console.step}
+                </div>
+                <h3 className="staff-home__card-title">{console.title}</h3>
+                <p className="staff-home__card-copy">{console.body}</p>
+                <span className="staff-home__card-cta">{console.cta} →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </StaffConsoleLayout>
   )
 }

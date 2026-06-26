@@ -29,11 +29,11 @@ export function ReadyNotificationBanner({
       </div>
       <div className="ready-banner__actions">
         <Link
-          to="/staff/kitchen"
+          to="/staff/dispatch"
           className="btn-primary btn-primary--inline ready-banner__cta"
           onClick={() => onGoToKitchen()}
         >
-          Go to kitchen
+          Start dispatch
         </Link>
         <button
           type="button"

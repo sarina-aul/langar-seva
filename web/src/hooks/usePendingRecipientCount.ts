@@ -24,12 +24,18 @@ export function usePendingRecipientCount(user: User | null | undefined): number 
   }, [user, coordinator])
 
   useEffect(() => {
-    void fetchCount()
+    queueMicrotask(() => {
+      void fetchCount()
+    })
 
     if (!user || !coordinator) return
 
+    const channelId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
     const channel = getSupabase()
-      .channel(`recipients_pending_count:${user.id}`)
+      .channel(`recipients_pending_count:${user.id}:${channelId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'recipients' },
