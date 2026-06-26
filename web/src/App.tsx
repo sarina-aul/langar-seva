@@ -5,11 +5,13 @@ import { IntakeForm } from './components/IntakeForm'
 import { RecipientHome } from './components/RecipientHome'
 import { RecipientLayout } from './components/RecipientLayout'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { DriverRoutePage } from './pages/DriverRoutePage'
 import { KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
 import { DispatchPage } from './pages/DispatchPage'
 import { RecipientsPage } from './pages/RecipientsPage'
 import { StaffHome } from './pages/StaffHome'
+import { TrackingPage } from './pages/TrackingPage'
 import type { RecipientRow } from './types/database'
 
 type IntakeStep = 'home' | 'form'
@@ -43,6 +45,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<IntakePage />} />
+      <Route path="/track/:token" element={<TrackingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/staff/login" element={<Navigate to="/login" replace />} />
       <Route
@@ -74,6 +77,14 @@ function App() {
         element={
           <ProtectedRoute requiredRole="coordinator">
             <DispatchPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/staff/driver/routes/:routeId"
+        element={
+          <ProtectedRoute>
+            <DriverRoutePage />
           </ProtectedRoute>
         }
       />

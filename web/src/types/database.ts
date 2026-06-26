@@ -19,6 +19,15 @@ export type ContactPref = 'phone' | 'text' | 'either'
 
 export type BatchStatus = 'prep' | 'cooking' | 'packing' | 'ready' | 'pickup' | 'dispatched'
 export type DispatchRouteStatus = 'planned' | 'assigned' | 'picked_up' | 'completed' | 'cancelled'
+export type DeliveryStopStatus =
+  | 'pending'
+  | 'on_the_way'
+  | 'nearby'
+  | 'delivered'
+  | 'skipped'
+  | 'unable_to_contact'
+  | 'delayed'
+export type DeliveryNotificationStatus = 'queued' | 'sent' | 'failed' | 'skipped' | 'logged'
 export type BatchAuditEventType =
   | 'stage_changed'
   | 'packed_count_changed'
@@ -150,6 +159,11 @@ export interface DispatchRouteRecipientInsert {
   recipient_id: string
   stop_order?: number
   meals: number
+  delivery_status?: DeliveryStopStatus
+  eta_start?: string | null
+  eta_end?: string | null
+  driver_note_internal?: string | null
+  client_visible_note?: string | null
 }
 
 export interface DispatchRouteRecipientRow extends DispatchRouteRecipientInsert {
@@ -159,6 +173,58 @@ export interface DispatchRouteRecipientRow extends DispatchRouteRecipientInsert 
   recipient_id: string
   stop_order: number
   meals: number
+  delivery_status: DeliveryStopStatus
+  eta_start: string | null
+  eta_end: string | null
+  status_updated_at: string
+  delivered_at: string | null
+  skipped_at: string | null
+  driver_note_internal: string | null
+  client_visible_note: string | null
+}
+
+export interface DeliveryTrackingLinkRow {
+  id: string
+  created_at: string
+  route_recipient_id: string
+  token_hash: string
+  expires_at: string
+  revoked_at: string | null
+  sent_at: string | null
+  last_viewed_at: string | null
+  created_by: string | null
+}
+
+export interface DeliveryNotificationInsert {
+  route_recipient_id: string
+  recipient_id: string
+  channel?: 'sms'
+  event_type: 'tracking_link_created' | 'tracking_link_sent' | 'delivery_status_update' | 'delivery_exception'
+  status?: DeliveryNotificationStatus
+  provider_message_id?: string | null
+  error?: string | null
+  sent_at?: string | null
+}
+
+export interface DeliveryNotificationRow extends DeliveryNotificationInsert {
+  id: string
+  created_at: string
+  channel: 'sms'
+  status: DeliveryNotificationStatus
+  provider_message_id: string | null
+  error: string | null
+  sent_at: string | null
+}
+
+export interface DeliveryTrackingStatus {
+  delivery_status: DeliveryStopStatus
+  status_label: string
+  eta_start: string | null
+  eta_end: string | null
+  last_updated_at: string
+  route_progress_label: string | null
+  client_visible_note: string | null
+  delivered_at: string | null
 }
 
 export interface BatchAuditEventRow {
@@ -246,6 +312,18 @@ export interface Database {
         Update: Partial<DispatchRouteRecipientInsert>
         Relationships: []
       }
+      delivery_tracking_links: {
+        Row: DeliveryTrackingLinkRow
+        Insert: never
+        Update: { revoked_at?: string | null; sent_at?: string | null; last_viewed_at?: string | null }
+        Relationships: []
+      }
+      delivery_notifications: {
+        Row: DeliveryNotificationRow
+        Insert: DeliveryNotificationInsert
+        Update: Partial<DeliveryNotificationInsert>
+        Relationships: []
+      }
       batch_audit_events: {
         Row: BatchAuditEventRow
         Insert: never
@@ -261,9 +339,21 @@ export interface Database {
     }
     Views: Record<string, never>
     Functions: {
-      is_coordinator:   { Args: Record<string, never>; Returns: boolean }
+      is_coordinator: { Args: Record<string, never>; Returns: boolean }
       is_kitchen_admin: { Args: Record<string, never>; Returns: boolean }
-      is_staff:         { Args: Record<string, never>; Returns: boolean }
+      is_staff: { Args: Record<string, never>; Returns: boolean }
+      create_delivery_tracking_link: {
+        Args: { p_route_recipient_id: string }
+        Returns: { tracking_token: string; expires_at: string }[]
+      }
+      get_delivery_tracking_status: {
+        Args: { p_tracking_token: string }
+        Returns: DeliveryTrackingStatus[]
+      }
+      mark_delivery_tracking_link_sent: {
+        Args: { p_route_recipient_id: string; p_provider_message_id?: string | null }
+        Returns: undefined
+      }
     }
     Enums: {
       recipient_status: RecipientStatus
@@ -273,6 +363,8 @@ export interface Database {
       contact_pref: ContactPref
       batch_status: BatchStatus
       dispatch_route_status: DispatchRouteStatus
+      delivery_stop_status: DeliveryStopStatus
+      delivery_notification_status: DeliveryNotificationStatus
     }
     CompositeTypes: Record<string, never>
   }
