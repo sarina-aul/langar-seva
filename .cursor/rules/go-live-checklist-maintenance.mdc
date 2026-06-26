@@ -1,0 +1,17 @@
+---
+description: Keep docs/go-live-checklist.md current when delivery or tracking work changes
+globs: docs/go-live-checklist.md,docs/delivery-*.md,web/src/pages/DispatchPage.tsx,web/src/pages/DriverRoutePage.tsx,web/src/pages/TrackingPage.tsx,supabase/migrations/*delivery*,supabase/functions/send-delivery-tracking-sms/**
+alwaysApply: false
+---
+
+# Go-live checklist maintenance
+
+When you change delivery routing, tracking, dispatch, driver flows, SMS, or pilot readiness:
+
+1. Update [docs/go-live-checklist.md](docs/go-live-checklist.md) in the same session.
+2. Set **Last reviewed** to today's date (`YYYY-MM-DD`).
+3. Check or uncheck items in Week 1 / Week 2 / Go-no-go tables to match reality.
+4. If scope or timeline shifts, update the mermaid Gantt dates or add a short note under **Pilot scope**.
+5. If work completes an item tracked on GitHub, mention the issue (#6, #9, #10) in the checklist or board comment.
+
+Do not leave the checklist stale after merging delivery-related features or changing pilot blockers.

@@ -2,7 +2,17 @@
 
 Target: **fully operational v1** for a controlled pilot — manual dispatch, client tracking, driver links, real SMS. Auto routing optimizer is **out of scope** for this pilot.
 
+**Last reviewed:** 2026-06-26
+
 Related trackers: [#6](https://github.com/sarina-aul/langar-seva/issues/6) · [#9](https://github.com/sarina-aul/langar-seva/issues/9) · [#10](https://github.com/sarina-aul/langar-seva/issues/10) · [Board](https://github.com/users/sarina-aul/projects/1)
+
+### Maintenance
+
+| Mechanism | Frequency | What it does |
+|-----------|-----------|--------------|
+| [GitHub Action](https://github.com/sarina-aul/langar-seva/blob/main/.github/workflows/go-live-checklist-reminder.yml) | Every Monday | Posts a review reminder on [#10](https://github.com/sarina-aul/langar-seva/issues/10) |
+| Cursor rule `.cursor/rules/go-live-checklist-maintenance.mdc` | When delivery code/docs change | Agent updates this file and checkboxes |
+| Manual | After each merge or pilot test | Refresh dates, charts, and go/no-go table |
 
 ---
 

@@ -1,0 +1,39 @@
+name: Go-live checklist reminder
+
+on:
+  schedule:
+    # Every Monday at 2:00 PM UTC
+    - cron: '0 14 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post weekly review reminder
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '## Weekly go-live checklist review',
+              '',
+              'Please update [docs/go-live-checklist.md](https://github.com/sarina-aul/langar-seva/blob/main/docs/go-live-checklist.md):',
+              '',
+              '- [ ] Set **Last reviewed** to today',
+              '- [ ] Update Week 1 / Week 2 checkboxes',
+              '- [ ] Refresh go/no-go table',
+              '- [ ] Adjust mermaid timeline if dates shifted',
+              '- [ ] Sync with [project board](https://github.com/users/sarina-aul/projects/1) columns',
+              '',
+              'Tracked on #10 · Pilot scope in checklist doc.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 10,
+              body,
+            });
