@@ -3,8 +3,9 @@
 Free langar meal delivery intake for recipients. Built with **React (Vite + TypeScript)**, **Supabase**, and designed in **Magic Patterns**.
 
 This repo contains:
-- `web/` — recipient intake form + confirmation (no login required)
-- `supabase/` — database schema, migrations, and RLS policies
+- `web/` — recipient intake, staff app, kitchen, dispatch, and tracking pages
+- `supabase/` — database schema, migrations, edge functions, and RLS policies
+- `specs/` — **product specs** (start at [`specs/README.md`](./specs/README.md))
 
 > **Note:** The existing Expo app lives in `~/seva-eats`. This project is the new web + Supabase stack for the Magic Patterns PRD.
 
@@ -110,6 +111,18 @@ supabase db reset
 supabase migration list
 ```
 
+## Product specs
+
+Feature specs live under [`specs/`](./specs/). **Start here:** [`specs/README.md`](./specs/README.md) — reading order, delivery-day flow, and feature catalog.
+
+| Read first | Document |
+|------------|----------|
+| 1 | [Platform overview](./specs/000-langar-seva-platform/spec.md) |
+| 2 | [Constitution](./.specify/memory/constitution.md) |
+| 3 | Feature specs `002`–`006` in delivery-day order (see index) |
+
+Built app vs spec audit: [GitHub #17](https://github.com/sarina-aul/langar-seva/issues/17).
+
 ## Magic Patterns
 
 See [INTEGRATION.md](./INTEGRATION.md) for designing screens in Magic Patterns and pulling components into this React app.
@@ -163,7 +176,7 @@ Supported roles (via `app_metadata.role`):
 | Role | Access |
 |------|--------|
 | `coordinator` | Staff dashboard, recipient management (RLS) |
-| `kitchen_admin` | Reserved for kitchen batch workflow (future) |
+| `kitchen_admin` | Kitchen batch workflow only (`/staff/kitchen`) |
 
 **Production:** Assign roles via Supabase Auth Admin API or Dashboard — never `user_metadata`.
 
@@ -179,6 +192,9 @@ Supported roles (via `app_metadata.role`):
 | `/staff` | Authenticated staff dashboard (batch-ready alerts for coordinators) |
 | `/staff/kitchen` | Kitchen batch workflow |
 | `/staff/recipients` | Coordinator only — review and approve pending requests |
+| `/staff/dispatch` | Coordinator only — manual route bundles and SMS |
+| `/track/:token` | Public — recipient delivery status (magic link) |
+| `/driver/route/:token` | Public — sevadar route sheet (magic link) |
 
 Public intake at `/` remains anonymous — no login required for recipients.
 
@@ -191,6 +207,7 @@ Public intake at `/` remains anonymous — no login required for recipients.
 - ✅ Kitchen batch workflow (6 stages, meal counts)
 - ✅ Ready in-app notification for coordinators
 - ✅ Coordinator recipients dashboard (approve → `approved`, reject → `rejected`)
-- ⏳ Batch recipient assignment (next step)
+- ✅ Manual dispatch, client tracking SMS, driver route magic links
+- ⏳ IVR phone intake (v1.1 — see `specs/001-ivr-intake/`)
 - ⏳ Email notifications (deferred)
 - ⏳ Geocoding pipeline (placeholder columns ready)
