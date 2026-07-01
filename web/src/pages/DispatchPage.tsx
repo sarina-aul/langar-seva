@@ -1,10 +1,19 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { StaffConsoleLayout } from '../components/StaffConsoleLayout'
+import {
+  DELIVERY_STOP_STATUS_LABELS,
+  estimateStopEta,
+  formatEtaWindow,
+} from '../lib/deliveryTracking'
 import { DELIVERY_WINDOW_LABELS, formatRecipientAddress } from '../lib/recipientLabels'
 import { getSupabase } from '../lib/supabase'
 import type {
   BatchRow,
+  DeliveryStopStatus,
+  DeliveryTrackingLinkRow,
   DispatchRouteRow,
+  DispatchRouteRecipientRow,
   DispatchRouteStatus,
   RecipientRow,
   SevadarRow,
@@ -15,6 +24,13 @@ interface RouteRecipient {
   id: string
   stop_order: number
   meals: number
+  delivery_status: DeliveryStopStatus
+  eta_start: string | null
+  eta_end: string | null
+  status_updated_at: string
+  client_visible_note: string | null
+  delivered_at: string | null
+  trackingLink: DeliveryTrackingLinkRow | null
   recipient: RecipientRow | null
 }
 
@@ -47,6 +63,18 @@ function statusLabel(status: DispatchRouteStatus): string {
   }
 }
 
+function canTextRecipient(recipient: RecipientRow | null): boolean {
+  return Boolean(recipient?.phone && (recipient.contact_pref === 'text' || recipient.contact_pref === 'either'))
+}
+
+function trackingLinkStatus(link: DeliveryTrackingLinkRow | null): string {
+  if (!link) return 'No link yet'
+  if (link.revoked_at) return 'Revoked'
+  if (new Date(link.expires_at).getTime() <= Date.now()) return 'Expired'
+  if (link.sent_at) return 'Sent'
+  return 'Created'
+}
+
 export function DispatchPage() {
   const [batch, setBatch] = useState<BatchRow | null>(null)
   const [approvedRecipients, setApprovedRecipients] = useState<RecipientRow[]>([])
@@ -54,6 +82,7 @@ export function DispatchPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [trackingMessage, setTrackingMessage] = useState<string | null>(null)
   const [routeName, setRouteName] = useState('Route 1')
   const [sevadarName, setSevadarName] = useState('')
   const [sevadarPhone, setSevadarPhone] = useState('')
@@ -84,6 +113,13 @@ export function DispatchPage() {
             id,
             stop_order,
             meals,
+            delivery_status,
+            eta_start,
+            eta_end,
+            status_updated_at,
+            client_visible_note,
+            delivered_at,
+            delivery_tracking_links (*),
             recipients (*)
           )
         `,
@@ -103,6 +139,13 @@ export function DispatchPage() {
           id: string
           stop_order: number
           meals: number
+          delivery_status: DeliveryStopStatus
+          eta_start: string | null
+          eta_end: string | null
+          status_updated_at: string
+          client_visible_note: string | null
+          delivered_at: string | null
+          delivery_tracking_links?: DeliveryTrackingLinkRow[] | DeliveryTrackingLinkRow | null
           recipients?: RecipientRow | null
         }>
       }
@@ -114,6 +157,15 @@ export function DispatchPage() {
             id: entry.id,
             stop_order: entry.stop_order,
             meals: entry.meals,
+            delivery_status: entry.delivery_status,
+            eta_start: entry.eta_start,
+            eta_end: entry.eta_end,
+            status_updated_at: entry.status_updated_at,
+            client_visible_note: entry.client_visible_note,
+            delivered_at: entry.delivered_at,
+            trackingLink: Array.isArray(entry.delivery_tracking_links)
+              ? entry.delivery_tracking_links[0] ?? null
+              : entry.delivery_tracking_links ?? null,
             recipient: entry.recipients ?? null,
           }))
           .sort((a, b) => a.stop_order - b.stop_order),
@@ -212,6 +264,7 @@ export function DispatchPage() {
         recipient_id: recipient.id,
         stop_order: index + 1,
         meals: recipient.meals,
+        ...estimateStopEta(new Date(), index + 1),
       })),
     )
 
@@ -232,6 +285,83 @@ export function DispatchPage() {
     setSevadarPhone('')
     setSelectedRecipients([])
     setSaving(false)
+  }
+
+  async function handleSendTrackingLink(entry: RouteRecipient) {
+    if (!batch) return
+    if (!canTextRecipient(entry.recipient)) {
+      setError('This recipient needs a phone number and text/either contact preference before SMS tracking can be sent.')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setTrackingMessage(null)
+
+    const origin = window.location.origin
+    const { data: functionData, error: functionError } = await getSupabase().functions.invoke(
+      'send-delivery-tracking-sms',
+      {
+        body: {
+          routeRecipientId: entry.id,
+          origin,
+        },
+      },
+    )
+
+    if (!functionError && functionData && typeof functionData === 'object') {
+      const result = functionData as { trackingUrl?: string; mode?: string }
+      await loadRoutes(batch.id)
+      setTrackingMessage(
+        result.mode === 'logged'
+          ? `Tracking link logged for development: ${result.trackingUrl ?? 'created'}`
+          : 'Tracking SMS queued for this recipient.',
+      )
+      setSaving(false)
+      return
+    }
+
+    const { data, error: rpcError } = await getSupabase().rpc('create_delivery_tracking_link', {
+      p_route_recipient_id: entry.id,
+    })
+
+    if (rpcError || !data?.[0]?.tracking_token) {
+      setSaving(false)
+      setError('Could not create the tracking link.')
+      return
+    }
+
+    await getSupabase().rpc('mark_delivery_tracking_link_sent', {
+      p_route_recipient_id: entry.id,
+      p_provider_message_id: null,
+    })
+
+    const trackingUrl = `${origin}/track/${data[0].tracking_token}`
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(trackingUrl)
+    }
+
+    await loadRoutes(batch.id)
+    setTrackingMessage(`Tracking link copied for development: ${trackingUrl}`)
+    setSaving(false)
+  }
+
+  async function handleUpdateStop(entry: RouteRecipient, updates: Partial<DispatchRouteRecipientRow>) {
+    if (!batch) return
+    setSaving(true)
+    setError(null)
+
+    const { error: updateError } = await getSupabase()
+      .from('dispatch_route_recipients')
+      .update(updates)
+      .eq('id', entry.id)
+
+    setSaving(false)
+    if (updateError) {
+      setError('Could not update delivery status.')
+      return
+    }
+    await loadRoutes(batch.id)
   }
 
   async function updateBatchStatus(status: 'pickup' | 'dispatched') {
@@ -282,6 +412,12 @@ export function DispatchPage() {
       {!loading && error && (
         <div className="dispatch-alert dispatch-alert--error" role="alert">
           {error}
+        </div>
+      )}
+
+      {!loading && trackingMessage && (
+        <div className="dispatch-alert dispatch-alert--success" role="status">
+          {trackingMessage}
         </div>
       )}
 
@@ -431,11 +567,41 @@ export function DispatchPage() {
                           <div>
                             <strong>{entry.recipient?.name ?? 'Recipient'}</strong>
                             <small>{entry.recipient ? formatRecipientAddress(entry.recipient) : ''}</small>
+                            <small>
+                              {DELIVERY_STOP_STATUS_LABELS[entry.delivery_status]} · {formatEtaWindow(entry.eta_start, entry.eta_end)}
+                            </small>
+                            <small>
+                              Tracking: {trackingLinkStatus(entry.trackingLink)}
+                              {!canTextRecipient(entry.recipient) ? ' · SMS unavailable' : ''}
+                            </small>
+                          </div>
+                          <div className="dispatch-route-card__stop-actions">
+                            <button
+                              type="button"
+                              className="dispatch-button"
+                              disabled={saving || !canTextRecipient(entry.recipient)}
+                              onClick={() => void handleSendTrackingLink(entry)}
+                            >
+                              {entry.trackingLink?.sent_at ? 'Resend link' : 'Send link'}
+                            </button>
+                            {entry.delivery_status !== 'delivered' && (
+                              <button
+                                type="button"
+                                className="dispatch-button"
+                                disabled={saving}
+                                onClick={() => void handleUpdateStop(entry, { delivery_status: 'delivered' })}
+                              >
+                                Delivered
+                              </button>
+                            )}
                           </div>
                         </li>
                       ))}
                     </ol>
                     <div className="dispatch-route-card__actions">
+                      <Link className="dispatch-button" to={`/staff/driver/routes/${route.id}`}>
+                        Open driver sheet
+                      </Link>
                       {route.status === 'assigned' && (
                         <button
                           type="button"
