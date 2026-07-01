@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.108.1'
+import { normalizeOrigin, sendTwilioSms } from '../_shared/twilio.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,42 +30,6 @@ function jsonResponse(body: unknown, status = 200): Response {
   })
 }
 
-function normalizeOrigin(origin: string | undefined): string {
-  if (!origin) return 'http://localhost:5173'
-  return origin.endsWith('/') ? origin.slice(0, -1) : origin
-}
-
-async function sendTwilioSms(to: string, body: string): Promise<string> {
-  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID')
-  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN')
-  const from = Deno.env.get('TWILIO_FROM_NUMBER')
-
-  if (!accountSid || !authToken || !from) {
-    console.log(`[delivery-tracking] SMS provider not configured. Would send to ${to}: ${body}`)
-    return 'logged'
-  }
-
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${btoa(`${accountSid}:${authToken}`)}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      From: from,
-      To: to,
-      Body: body,
-    }),
-  })
-
-  if (!response.ok) {
-    throw new Error(`Twilio send failed with ${response.status}`)
-  }
-
-  const payload = await response.json() as { sid?: string }
-  return payload.sid ?? 'sent'
-}
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -82,7 +47,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'Function is not configured for authenticated sending.' }, 500)
   }
 
-  const body = await request.json() as RequestBody
+  const body = (await request.json()) as RequestBody
   if (!body.routeRecipientId) {
     return jsonResponse({ error: 'routeRecipientId is required.' }, 400)
   }

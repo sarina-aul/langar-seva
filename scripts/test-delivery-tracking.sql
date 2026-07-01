@@ -183,6 +183,124 @@ DO $$ DECLARE cnt int; BEGIN
   INSERT INTO tracking_results VALUES ('T08 revoked token hidden', CASE WHEN cnt=0 THEN 'PASS' ELSE 'FAIL' END, 'rows='||cnt);
 END $$;
 
+-- Driver route magic links
+CREATE TEMP TABLE driver_context (route_id uuid, route_token text);
+
+RESET ROLE; SELECT set_jwt('coordinator'); SET LOCAL ROLE authenticated;
+DO $$ DECLARE
+  route_id uuid;
+  token text;
+BEGIN
+  SELECT dr.id INTO route_id
+  FROM public.dispatch_routes dr
+  JOIN public.batches b ON b.id = dr.batch_id
+  WHERE b.batch_date = '2099-02-01'
+  LIMIT 1;
+
+  SELECT route_token INTO token
+  FROM public.create_driver_route_link(route_id);
+
+  INSERT INTO driver_context VALUES (route_id, token);
+  INSERT INTO tracking_results VALUES ('T09 coordinator creates driver link', 'PASS', 'route='||left(route_id::text,8));
+EXCEPTION WHEN others THEN
+  INSERT INTO tracking_results VALUES ('T09 coordinator creates driver link', 'FAIL', left(SQLERRM,80));
+END $$;
+
+RESET ROLE; SELECT set_jwt('anon'); SET LOCAL ROLE anon;
+DO $$ DECLARE payload json; BEGIN
+  SELECT public.get_driver_route_for_token((SELECT route_token FROM driver_context LIMIT 1)) INTO payload;
+  INSERT INTO tracking_results VALUES (
+    'T10 anon driver route payload',
+    CASE WHEN payload IS NOT NULL AND payload->>'route_name' IS NOT NULL THEN 'PASS' ELSE 'FAIL' END,
+    coalesce(payload->>'route_name', 'null')
+  );
+END $$;
+
+RESET ROLE; SELECT set_jwt('coordinator'); SET LOCAL ROLE authenticated;
+DO $$ BEGIN
+  PERFORM public.revoke_driver_route_link((SELECT route_id FROM driver_context LIMIT 1));
+  INSERT INTO tracking_results VALUES ('T11 revoke driver link', 'PASS', 'revoked');
+EXCEPTION WHEN others THEN
+  INSERT INTO tracking_results VALUES ('T11 revoke driver link', 'FAIL', left(SQLERRM,80));
+END $$;
+
+RESET ROLE; SELECT set_jwt('anon'); SET LOCAL ROLE anon;
+DO $$ DECLARE payload json; BEGIN
+  SELECT public.get_driver_route_for_token((SELECT route_token FROM driver_context LIMIT 1)) INTO payload;
+  INSERT INTO tracking_results VALUES (
+    'T12 revoked driver link hidden',
+    CASE WHEN payload IS NULL THEN 'PASS' ELSE 'FAIL' END,
+    coalesce(payload->>'route_name', 'null')
+  );
+END $$;
+
+RESET ROLE; SELECT set_jwt('coordinator'); SET LOCAL ROLE authenticated;
+DO $$ DECLARE
+  route_id uuid;
+  token text;
+BEGIN
+  SELECT route_id INTO route_id FROM driver_context LIMIT 1;
+
+  SELECT route_token INTO token
+  FROM public.create_driver_route_link(route_id);
+
+  UPDATE driver_context SET route_token = token WHERE route_id = driver_context.route_id;
+  INSERT INTO tracking_results VALUES ('T13 recreate driver link after revoke', 'PASS', 'route='||left(route_id::text,8));
+EXCEPTION WHEN others THEN
+  INSERT INTO tracking_results VALUES ('T13 recreate driver link after revoke', 'FAIL', left(SQLERRM,80));
+END $$;
+
+RESET ROLE; SELECT set_jwt('anon'); SET LOCAL ROLE anon;
+DO $$ DECLARE ok boolean; BEGIN
+  SELECT public.mark_driver_route_picked_up((SELECT route_token FROM driver_context LIMIT 1)) INTO ok;
+  INSERT INTO tracking_results VALUES (
+    'T14 driver marks picked up',
+    CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END,
+    'picked_up='||ok::text
+  );
+END $$;
+
+DO $$ DECLARE
+  stop_id uuid;
+  ok boolean;
+BEGIN
+  SELECT (payload->'stops'->0->>'id')::uuid INTO stop_id
+  FROM (
+    SELECT public.get_driver_route_for_token((SELECT route_token FROM driver_context LIMIT 1)) AS payload
+  ) route_payload;
+
+  SELECT public.update_driver_route_stop(
+    (SELECT route_token FROM driver_context LIMIT 1),
+    stop_id,
+    'delivered'::public.delivery_stop_status,
+    'Left at door'
+  ) INTO ok;
+
+  INSERT INTO tracking_results VALUES (
+    'T15 driver updates stop',
+    CASE WHEN ok THEN 'PASS' ELSE 'FAIL' END,
+    'stop='||left(stop_id::text,8)
+  );
+END $$;
+
+DO $$ DECLARE payload json; BEGIN
+  SELECT public.get_driver_route_for_token((SELECT route_token FROM driver_context LIMIT 1)) INTO payload;
+  INSERT INTO tracking_results VALUES (
+    'T16 driver stop status persisted',
+    CASE WHEN payload->'stops'->0->>'delivery_status' = 'delivered' THEN 'PASS' ELSE 'FAIL' END,
+    coalesce(payload->'stops'->0->>'delivery_status', 'null')
+  );
+END $$;
+
+DO $$ DECLARE payload json; BEGIN
+  SELECT public.get_driver_route_for_token('not-a-real-driver-token') INTO payload;
+  INSERT INTO tracking_results VALUES (
+    'T17 invalid driver token hidden',
+    CASE WHEN payload IS NULL THEN 'PASS' ELSE 'FAIL' END,
+    coalesce(payload->>'route_name', 'null')
+  );
+END $$;
+
 RESET ROLE;
 SELECT test, result, detail FROM tracking_results ORDER BY test;
 

@@ -9,8 +9,9 @@
 **Input**: Manual route bundles, sevadar route magic links, client tracking SMS and status pages
 
 **Implementation note**: Public driver magic link (`/driver/route/:token`), client tracking
-(`/track/:token`), and dispatch SMS edge functions are implemented. Remaining pilot work: surface
-SMS failures in dispatch UI and production Twilio verification (see [GitHub #17](https://github.com/sarina-aul/langar-seva/issues/17)).
+(`/track/:token`), `send-driver-route-sms`, and `20260627120000_driver_route_links.sql` are
+implemented. Remaining pilot work: surface SMS failures in dispatch UI and production Twilio
+verification (see [GitHub #17](https://github.com/sarina-aul/langar-seva/issues/17)).
 
 ## User Scenarios & Testing *(mandatory)*
 

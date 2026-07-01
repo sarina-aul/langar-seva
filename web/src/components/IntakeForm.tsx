@@ -6,6 +6,7 @@ import {
   LANGUAGE_OPTIONS,
 } from '../lib/recipientLabels'
 import { getSupabase } from '../lib/supabase'
+import { isValidPostalCode, normalizePostalCode, POSTAL_CODE_HINT } from '../lib/postalCode'
 import type {
   ContactPref,
   DeliveryFrequency,
@@ -21,6 +22,7 @@ export interface IntakeFormData {
   phone: string
   address: string
   unit_buzz: string
+  postal_code: string
   household_size: number
   meals: number
   delivery_window: DeliveryWindow
@@ -35,6 +37,7 @@ const initialForm: IntakeFormData = {
   phone: '',
   address: '',
   unit_buzz: '',
+  postal_code: '',
   household_size: 1,
   meals: 1,
   delivery_window: 'flexible',
@@ -49,6 +52,7 @@ interface FieldErrors {
   phone?: string
   address?: string
   unit_buzz?: string
+  postal_code?: string
   household_size?: string
   meals?: string
   delivery_window?: string
@@ -63,6 +67,9 @@ function validate(data: IntakeFormData, consent: boolean): FieldErrors {
   if (!data.phone.trim()) errors.phone = 'Please enter a phone number we can reach you at.'
   if (!data.address.trim()) errors.address = 'Please enter your delivery address.'
   if (!data.unit_buzz.trim()) errors.unit_buzz = 'Please enter your unit or buzzer number (or type "none").'
+  if (data.postal_code.trim() && !isValidPostalCode(data.postal_code)) {
+    errors.postal_code = 'Please enter a valid Canadian postal code (example: L6P 2X1).'
+  }
   if (data.household_size < 1 || data.household_size > 20) {
     errors.household_size = 'Household size must be between 1 and 20.'
   }
@@ -93,6 +100,10 @@ function recipientFromSubmission(payload: RecipientInsert): RecipientRow {
     geocode_lng: null,
     geocode_place_id: null,
     geocoded_at: null,
+    intake_channel: 'web',
+    sms_confirmation_status: null,
+    postal_code: payload.postal_code ?? null,
+    postal_prefix: payload.postal_code ? payload.postal_code.replace(/\s+/g, '').slice(0, 3) : null,
   }
 }
 
@@ -141,6 +152,7 @@ export function IntakeForm({ onSuccess, onBack }: IntakeFormProps) {
       phone: form.phone.trim(),
       address: form.address.trim(),
       unit_buzz: form.unit_buzz.trim(),
+      postal_code: normalizePostalCode(form.postal_code),
       household_size: form.household_size,
       meals: form.meals,
       delivery_window: form.delivery_window,
@@ -309,6 +321,23 @@ export function IntakeForm({ onSuccess, onBack }: IntakeFormProps) {
               required
             />
             {errors.unit_buzz && <span className="intake-field__error">{errors.unit_buzz}</span>}
+          </div>
+
+          <div className="intake-field">
+            <label className="intake-field__label" htmlFor="postal_code">
+              Postal code
+            </label>
+            <input
+              id="postal_code"
+              className={`intake-field__input${errors.postal_code ? ' intake-field__input--error' : ''}`}
+              type="text"
+              autoComplete="postal-code"
+              inputMode="text"
+              placeholder={POSTAL_CODE_HINT}
+              value={form.postal_code}
+              onChange={(e) => updateField('postal_code', e.target.value.toUpperCase())}
+            />
+            {errors.postal_code && <span className="intake-field__error">{errors.postal_code}</span>}
           </div>
 
           <fieldset className="intake-fieldset">

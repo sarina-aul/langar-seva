@@ -9,6 +9,7 @@ import { DriverRoutePage } from './pages/DriverRoutePage'
 import { KitchenPage } from './pages/KitchenPage'
 import { LoginPage } from './pages/LoginPage'
 import { DispatchPage } from './pages/DispatchPage'
+import { PublicDriverRoutePage } from './pages/PublicDriverRoutePage'
 import { RecipientsPage } from './pages/RecipientsPage'
 import { StaffHome } from './pages/StaffHome'
 import { TrackingPage } from './pages/TrackingPage'
@@ -46,6 +47,7 @@ function App() {
     <Routes>
       <Route path="/" element={<IntakePage />} />
       <Route path="/track/:token" element={<TrackingPage />} />
+      <Route path="/driver/route/:token" element={<PublicDriverRoutePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/staff/login" element={<Navigate to="/login" replace />} />
       <Route

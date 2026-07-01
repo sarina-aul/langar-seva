@@ -7,11 +7,13 @@ import {
   formatEtaWindow,
 } from '../lib/deliveryTracking'
 import { DELIVERY_WINDOW_LABELS, formatRecipientAddress } from '../lib/recipientLabels'
+import { isValidPostalCode, normalizePostalCode, POSTAL_CODE_HINT } from '../lib/postalCode'
 import { getSupabase } from '../lib/supabase'
 import type {
   BatchRow,
   DeliveryStopStatus,
   DeliveryTrackingLinkRow,
+  DriverRouteLinkRow,
   DispatchRouteRow,
   DispatchRouteRecipientRow,
   DispatchRouteStatus,
@@ -37,6 +39,7 @@ interface RouteRecipient {
 interface DispatchRouteWithDetails extends DispatchRouteRow {
   sevadar: SevadarRow | null
   recipients: RouteRecipient[]
+  driverLink: DriverRouteLinkRow | null
 }
 
 function todayIso(): string {
@@ -67,12 +70,19 @@ function canTextRecipient(recipient: RecipientRow | null): boolean {
   return Boolean(recipient?.phone && (recipient.contact_pref === 'text' || recipient.contact_pref === 'either'))
 }
 
-function trackingLinkStatus(link: DeliveryTrackingLinkRow | null): string {
-  if (!link) return 'No link yet'
+function magicLinkStatus(
+  link: Pick<DeliveryTrackingLinkRow | DriverRouteLinkRow, 'revoked_at' | 'expires_at' | 'sent_at'> | null,
+  emptyLabel: string,
+): string {
+  if (!link) return emptyLabel
   if (link.revoked_at) return 'Revoked'
   if (new Date(link.expires_at).getTime() <= Date.now()) return 'Expired'
   if (link.sent_at) return 'Sent'
   return 'Created'
+}
+
+function canTextSevadar(sevadar: SevadarRow | null): boolean {
+  return Boolean(sevadar?.phone?.trim())
 }
 
 export function DispatchPage() {
@@ -82,10 +92,11 @@ export function DispatchPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [trackingMessage, setTrackingMessage] = useState<string | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [routeName, setRouteName] = useState('Route 1')
   const [sevadarName, setSevadarName] = useState('')
   const [sevadarPhone, setSevadarPhone] = useState('')
+  const [sevadarHomePostal, setSevadarHomePostal] = useState('')
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([])
 
   const assignedRecipientIds = useMemo(
@@ -109,6 +120,7 @@ export function DispatchPage() {
         `
           *,
           sevadars (*),
+          driver_route_links (*),
           dispatch_route_recipients (
             id,
             stop_order,
@@ -135,6 +147,7 @@ export function DispatchPage() {
     const normalized = ((data as unknown[]) ?? []).map((route) => {
       const row = route as DispatchRouteRow & {
         sevadars?: SevadarRow | null
+        driver_route_links?: DriverRouteLinkRow[] | DriverRouteLinkRow | null
         dispatch_route_recipients?: Array<{
           id: string
           stop_order: number
@@ -152,6 +165,9 @@ export function DispatchPage() {
       return {
         ...row,
         sevadar: row.sevadars ?? null,
+        driverLink: Array.isArray(row.driver_route_links)
+          ? row.driver_route_links[0] ?? null
+          : row.driver_route_links ?? null,
         recipients: (row.dispatch_route_recipients ?? [])
           .map((entry) => ({
             id: entry.id,
@@ -221,6 +237,14 @@ export function DispatchPage() {
       setError('Enter the sevadar name for this route.')
       return
     }
+    if (!sevadarHomePostal.trim()) {
+      setError('Enter the sevadar home postal code for route planning.')
+      return
+    }
+    if (!isValidPostalCode(sevadarHomePostal)) {
+      setError(`Enter a valid Canadian postal code for the sevadar home (${POSTAL_CODE_HINT}).`)
+      return
+    }
 
     setSaving(true)
     setError(null)
@@ -230,6 +254,7 @@ export function DispatchPage() {
       .insert({
         name: sevadarName.trim(),
         phone: sevadarPhone.trim() || null,
+        home_postal_code: normalizePostalCode(sevadarHomePostal),
       })
       .select()
       .single()
@@ -279,10 +304,11 @@ export function DispatchPage() {
       .update({ status: 'active' })
       .in('id', selected.map((recipient) => recipient.id))
 
-    await Promise.all([loadRoutes(batch.id), loadDispatchData()])
+    await loadDispatchData()
     setRouteName(`Route ${routes.length + 2}`)
     setSevadarName('')
     setSevadarPhone('')
+    setSevadarHomePostal('')
     setSelectedRecipients([])
     setSaving(false)
   }
@@ -296,7 +322,7 @@ export function DispatchPage() {
 
     setSaving(true)
     setError(null)
-    setTrackingMessage(null)
+    setStatusMessage(null)
 
     const origin = window.location.origin
     const { data: functionData, error: functionError } = await getSupabase().functions.invoke(
@@ -312,7 +338,7 @@ export function DispatchPage() {
     if (!functionError && functionData && typeof functionData === 'object') {
       const result = functionData as { trackingUrl?: string; mode?: string }
       await loadRoutes(batch.id)
-      setTrackingMessage(
+      setStatusMessage(
         result.mode === 'logged'
           ? `Tracking link logged for development: ${result.trackingUrl ?? 'created'}`
           : 'Tracking SMS queued for this recipient.',
@@ -342,8 +368,85 @@ export function DispatchPage() {
     }
 
     await loadRoutes(batch.id)
-    setTrackingMessage(`Tracking link copied for development: ${trackingUrl}`)
+    setStatusMessage(`Tracking link copied for development: ${trackingUrl}`)
     setSaving(false)
+  }
+
+  async function handleSendDriverRouteLink(route: DispatchRouteWithDetails) {
+    if (!batch) return
+    if (!canTextSevadar(route.sevadar)) {
+      setError('Enter a sevadar phone number on this route before sending the driver link.')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setStatusMessage(null)
+
+    const origin = window.location.origin
+    const { data: functionData, error: functionError } = await getSupabase().functions.invoke(
+      'send-driver-route-sms',
+      {
+        body: {
+          routeId: route.id,
+          origin,
+        },
+      },
+    )
+
+    if (!functionError && functionData && typeof functionData === 'object') {
+      const result = functionData as { routeUrl?: string; mode?: string }
+      await loadRoutes(batch.id)
+      setStatusMessage(
+        result.mode === 'logged'
+          ? `Driver route link logged for development: ${result.routeUrl ?? 'created'}`
+          : 'Driver route SMS queued for this sevadar.',
+      )
+      setSaving(false)
+      return
+    }
+
+    const { data, error: rpcError } = await getSupabase().rpc('create_driver_route_link', {
+      p_route_id: route.id,
+    })
+
+    if (rpcError || !data?.[0]?.route_token) {
+      setSaving(false)
+      setError('Could not create the driver route link.')
+      return
+    }
+
+    await getSupabase().rpc('mark_driver_route_link_sent', {
+      p_route_id: route.id,
+      p_provider_message_id: null,
+    })
+
+    const routeUrl = `${origin}/driver/route/${data[0].route_token}`
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(routeUrl)
+    }
+
+    await loadRoutes(batch.id)
+    setStatusMessage(`Driver route link copied for development: ${routeUrl}`)
+    setSaving(false)
+  }
+
+  async function handleRevokeDriverRouteLink(route: DispatchRouteWithDetails) {
+    if (!batch) return
+    setSaving(true)
+    setError(null)
+
+    const { error: revokeError } = await getSupabase().rpc('revoke_driver_route_link', {
+      p_route_id: route.id,
+    })
+
+    setSaving(false)
+    if (revokeError) {
+      setError('Could not revoke the driver route link.')
+      return
+    }
+    await loadRoutes(batch.id)
+    setStatusMessage('Driver route link revoked.')
   }
 
   async function handleUpdateStop(entry: RouteRecipient, updates: Partial<DispatchRouteRecipientRow>) {
@@ -415,9 +518,9 @@ export function DispatchPage() {
         </div>
       )}
 
-      {!loading && trackingMessage && (
+      {!loading && statusMessage && (
         <div className="dispatch-alert dispatch-alert--success" role="status">
-          {trackingMessage}
+          {statusMessage}
         </div>
       )}
 
@@ -498,6 +601,14 @@ export function DispatchPage() {
                   <span>Sevadar phone</span>
                   <input value={sevadarPhone} onChange={(e) => setSevadarPhone(e.target.value)} />
                 </label>
+                <label className="dispatch-field">
+                  <span>Sevadar home postal code</span>
+                  <input
+                    value={sevadarHomePostal}
+                    placeholder={POSTAL_CODE_HINT}
+                    onChange={(e) => setSevadarHomePostal(e.target.value.toUpperCase())}
+                  />
+                </label>
               </div>
 
               <div className="dispatch-recipient-picker">
@@ -525,7 +636,8 @@ export function DispatchPage() {
                         <span>
                           <strong>{recipient.name}</strong>
                           <small>
-                            {recipient.meals} meals · {DELIVERY_WINDOW_LABELS[recipient.delivery_window]} ·{' '}
+                            {recipient.meals} meals · {DELIVERY_WINDOW_LABELS[recipient.delivery_window]}
+                            {recipient.postal_code ? ` · ${recipient.postal_code}` : ' · No postal code'} ·{' '}
                             {formatRecipientAddress(recipient)}
                           </small>
                         </span>
@@ -557,6 +669,13 @@ export function DispatchPage() {
                         <p className="dispatch-route-card__eyebrow">{statusLabel(route.status)}</p>
                         <h3>{route.route_name}</h3>
                         <p>{route.sevadar?.name ?? 'Unassigned sevadar'}{route.sevadar?.phone ? ` · ${route.sevadar.phone}` : ''}</p>
+                        {route.sevadar?.home_postal_code && (
+                          <p>Home area: {route.sevadar.home_postal_code}</p>
+                        )}
+                        <p className="dispatch-route-card__driver-link">
+                          Driver link: {magicLinkStatus(route.driverLink, 'No driver link yet')}
+                          {!canTextSevadar(route.sevadar) ? ' · SMS unavailable' : ''}
+                        </p>
                       </div>
                       <span>{route.recipients.reduce((sum, entry) => sum + entry.meals, 0)} meals</span>
                     </div>
@@ -571,7 +690,7 @@ export function DispatchPage() {
                               {DELIVERY_STOP_STATUS_LABELS[entry.delivery_status]} · {formatEtaWindow(entry.eta_start, entry.eta_end)}
                             </small>
                             <small>
-                              Tracking: {trackingLinkStatus(entry.trackingLink)}
+                              Tracking: {magicLinkStatus(entry.trackingLink, 'No link yet')}
                               {!canTextRecipient(entry.recipient) ? ' · SMS unavailable' : ''}
                             </small>
                           </div>
@@ -599,6 +718,24 @@ export function DispatchPage() {
                       ))}
                     </ol>
                     <div className="dispatch-route-card__actions">
+                      <button
+                        type="button"
+                        className="dispatch-button dispatch-button--primary"
+                        disabled={saving || !canTextSevadar(route.sevadar)}
+                        onClick={() => void handleSendDriverRouteLink(route)}
+                      >
+                        {route.driverLink?.sent_at ? 'Resend driver link' : 'Send driver link'}
+                      </button>
+                      {route.driverLink && !route.driverLink.revoked_at && (
+                        <button
+                          type="button"
+                          className="dispatch-button"
+                          disabled={saving}
+                          onClick={() => void handleRevokeDriverRouteLink(route)}
+                        >
+                          Revoke driver link
+                        </button>
+                      )}
                       <Link className="dispatch-button" to={`/staff/driver/routes/${route.id}`}>
                         Open driver sheet
                       </Link>
