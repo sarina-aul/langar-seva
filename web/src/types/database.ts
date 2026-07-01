@@ -15,6 +15,8 @@ export type DeliveryFrequency = 'one_time' | 'weekly' | 'biweekly' | 'monthly'
 
 export type ContactPref = 'phone' | 'text' | 'either'
 
+export type IntakeChannel = 'web' | 'ivr' | 'staff'
+
 // ─── Kitchen batch ────────────────────────────────────────────────────────────
 
 export type BatchStatus = 'prep' | 'cooking' | 'packing' | 'ready' | 'pickup' | 'dispatched'
@@ -119,6 +121,7 @@ export interface BatchRow {
 export interface SevadarInsert {
   name: string
   phone?: string | null
+  home_postal_code?: string | null
   notes?: string | null
   active?: boolean
 }
@@ -129,6 +132,8 @@ export interface SevadarRow extends SevadarInsert {
   updated_at: string
   name: string
   phone: string | null
+  home_postal_code: string | null
+  home_postal_prefix: string | null
   notes: string | null
   active: boolean
 }
@@ -195,11 +200,28 @@ export interface DeliveryTrackingLinkRow {
   created_by: string | null
 }
 
+export interface DriverRouteLinkRow {
+  id: string
+  created_at: string
+  route_id: string
+  token_hash: string
+  expires_at: string
+  revoked_at: string | null
+  sent_at: string | null
+  last_viewed_at: string | null
+  created_by: string | null
+}
+
 export interface DeliveryNotificationInsert {
   route_recipient_id: string
   recipient_id: string
   channel?: 'sms'
-  event_type: 'tracking_link_created' | 'tracking_link_sent' | 'delivery_status_update' | 'delivery_exception'
+  event_type:
+    | 'tracking_link_created'
+    | 'tracking_link_sent'
+    | 'driver_route_link_sent'
+    | 'delivery_status_update'
+    | 'delivery_exception'
   status?: DeliveryNotificationStatus
   provider_message_id?: string | null
   error?: string | null
@@ -258,6 +280,7 @@ export interface RecipientInsert {
   phone: string
   address: string
   unit_buzz: string
+  postal_code?: string | null
   household_size: number
   meals: number
   delivery_window: DeliveryWindow
@@ -266,6 +289,7 @@ export interface RecipientInsert {
   contact_pref?: ContactPref | null
   notes?: string | null
   status?: RecipientStatus
+  intake_channel?: IntakeChannel
 }
 
 export interface RecipientRow extends RecipientInsert {
@@ -273,6 +297,10 @@ export interface RecipientRow extends RecipientInsert {
   created_at: string
   updated_at: string
   status: RecipientStatus
+  intake_channel: IntakeChannel
+  sms_confirmation_status: string | null
+  postal_code: string | null
+  postal_prefix: string | null
   geocode_lat: number | null
   geocode_lng: number | null
   geocode_place_id: string | null

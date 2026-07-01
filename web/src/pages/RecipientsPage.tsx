@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { StaffConsoleLayout } from '../components/StaffConsoleLayout'
+import { StaffRecipientForm } from '../components/StaffRecipientForm'
 import {
   CONTACT_PREF_LABELS,
   DELIVERY_WINDOW_LABELS,
   formatRecipientAddress,
   formatSubmittedDate,
   FREQUENCY_LABELS,
+  INTAKE_CHANNEL_LABELS,
   LANGUAGE_LABELS,
   RECIPIENT_STATUS_LABELS,
 } from '../lib/recipientLabels'
@@ -35,13 +37,27 @@ function statusMatchesFilter(status: RecipientStatus, filter: RecipientFilterSta
 interface RecipientCardProps {
   recipient: RecipientRow
   savingId: string | null
+  editingId: string | null
   onApprove: (id: string) => void
   onReject: (id: string) => void
+  onEdit: (id: string) => void
+  onCancelEdit: () => void
+  onSaved: (recipient: RecipientRow) => void
 }
 
-function RecipientCard({ recipient, savingId, onApprove, onReject }: RecipientCardProps) {
+function RecipientCard({
+  recipient,
+  savingId,
+  editingId,
+  onApprove,
+  onReject,
+  onEdit,
+  onCancelEdit,
+  onSaved,
+}: RecipientCardProps) {
   const isPending = recipient.status === 'pending'
   const isSaving = savingId === recipient.id
+  const isEditing = editingId === recipient.id
 
   return (
     <article className="recipient-card">
@@ -52,6 +68,12 @@ function RecipientCard({ recipient, savingId, onApprove, onReject }: RecipientCa
           <p className="recipient-card__meta">
             {recipient.phone} · Submitted {formatSubmittedDate(recipient.created_at)}
           </p>
+          {isPending && recipient.intake_channel !== 'web' && (
+            <p className="recipient-card__channel">
+              {INTAKE_CHANNEL_LABELS[recipient.intake_channel]}
+              {recipient.sms_confirmation_status === 'failed' ? ' · SMS failed' : ''}
+            </p>
+          )}
         </div>
         <span className={`recipient-card__status recipient-card__status--${recipient.status}`}>
           <span className="recipient-card__status-dot" aria-hidden="true" />
@@ -59,65 +81,88 @@ function RecipientCard({ recipient, savingId, onApprove, onReject }: RecipientCa
         </span>
       </div>
 
-      <dl className="recipient-card__details">
-        <div className="recipient-card__row">
-          <dt>Address</dt>
-          <dd>{formatRecipientAddress(recipient)}</dd>
-        </div>
-        <div className="recipient-card__row">
-          <dt>Meals</dt>
-          <dd>
-            {recipient.meals} meal{recipient.meals === 1 ? '' : 's'} · household of{' '}
-            {recipient.household_size}
-          </dd>
-        </div>
-        <div className="recipient-card__row">
-          <dt>Window</dt>
-          <dd>{DELIVERY_WINDOW_LABELS[recipient.delivery_window]}</dd>
-        </div>
-        <div className="recipient-card__row">
-          <dt>Language</dt>
-          <dd>{LANGUAGE_LABELS[recipient.language]}</dd>
-        </div>
-        {recipient.frequency && (
-          <div className="recipient-card__row">
-            <dt>Frequency</dt>
-            <dd>{FREQUENCY_LABELS[recipient.frequency]}</dd>
-          </div>
-        )}
-        {recipient.contact_pref && (
-          <div className="recipient-card__row">
-            <dt>Contact</dt>
-            <dd>{CONTACT_PREF_LABELS[recipient.contact_pref]}</dd>
-          </div>
-        )}
-        {recipient.notes && (
-          <div className="recipient-card__row">
-            <dt>Notes</dt>
-            <dd>{recipient.notes}</dd>
-          </div>
-        )}
-      </dl>
+      {isEditing ? (
+        <StaffRecipientForm
+          mode="edit"
+          recipient={recipient}
+          onCancel={onCancelEdit}
+          onSaved={onSaved}
+        />
+      ) : (
+        <>
+          <dl className="recipient-card__details">
+            <div className="recipient-card__row">
+              <dt>Address</dt>
+              <dd>{formatRecipientAddress(recipient)}</dd>
+            </div>
+            <div className="recipient-card__row">
+              <dt>Postal code</dt>
+              <dd>{recipient.postal_code ?? 'Not provided'}</dd>
+            </div>
+            <div className="recipient-card__row">
+              <dt>Meals</dt>
+              <dd>
+                {recipient.meals} meal{recipient.meals === 1 ? '' : 's'} · household of{' '}
+                {recipient.household_size}
+              </dd>
+            </div>
+            <div className="recipient-card__row">
+              <dt>Window</dt>
+              <dd>{DELIVERY_WINDOW_LABELS[recipient.delivery_window]}</dd>
+            </div>
+            <div className="recipient-card__row">
+              <dt>Language</dt>
+              <dd>{LANGUAGE_LABELS[recipient.language]}</dd>
+            </div>
+            {recipient.frequency && (
+              <div className="recipient-card__row">
+                <dt>Frequency</dt>
+                <dd>{FREQUENCY_LABELS[recipient.frequency]}</dd>
+              </div>
+            )}
+            {recipient.contact_pref && (
+              <div className="recipient-card__row">
+                <dt>Contact</dt>
+                <dd>{CONTACT_PREF_LABELS[recipient.contact_pref]}</dd>
+              </div>
+            )}
+            {recipient.notes && (
+              <div className="recipient-card__row">
+                <dt>Notes</dt>
+                <dd>{recipient.notes}</dd>
+              </div>
+            )}
+          </dl>
 
-      {isPending && (
-        <div className="recipient-card__actions">
-          <button
-            type="button"
-            className="recipient-card__button recipient-card__button--approve"
-            disabled={isSaving}
-            onClick={() => onApprove(recipient.id)}
-          >
-            {isSaving ? 'Saving…' : 'Approve'}
-          </button>
-          <button
-            type="button"
-            className="recipient-card__button recipient-card__button--reject"
-            disabled={isSaving}
-            onClick={() => onReject(recipient.id)}
-          >
-            Reject
-          </button>
-        </div>
+          {isPending && (
+            <div className="recipient-card__actions">
+              <button
+                type="button"
+                className="recipient-card__button"
+                disabled={isSaving}
+                onClick={() => onEdit(recipient.id)}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className="recipient-card__button recipient-card__button--approve"
+                disabled={isSaving}
+                onClick={() => onApprove(recipient.id)}
+              >
+                {isSaving ? 'Saving…' : 'Approve'}
+              </button>
+              <button
+                type="button"
+                className="recipient-card__button recipient-card__button--reject"
+                disabled={isSaving}
+                onClick={() => onReject(recipient.id)}
+              >
+                Reject
+              </button>
+            </div>
+          )}
+        </>
       )}
     </article>
   )
@@ -130,6 +175,8 @@ export function RecipientsPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [showStaffIntake, setShowStaffIntake] = useState(false)
 
   const fetchRecipients = useCallback(async () => {
     setLoading(true)
@@ -218,6 +265,7 @@ export function RecipientsPage() {
       return
     }
 
+    setEditingId(null)
     if (filter !== 'all') {
       setRecipients((prev) => prev.filter((r) => r.id !== id))
     } else {
@@ -236,6 +284,18 @@ export function RecipientsPage() {
       return
     }
     void updateStatus(id, 'rejected')
+  }
+
+  function handleSaved(recipient: RecipientRow) {
+    setEditingId(null)
+    setShowStaffIntake(false)
+    setRecipients((prev) => {
+      const without = prev.filter((r) => r.id !== recipient.id)
+      if (statusMatchesFilter(recipient.status, filter)) {
+        return [recipient, ...without]
+      }
+      return without
+    })
   }
 
   const counts = recipients.reduce(
@@ -287,8 +347,31 @@ export function RecipientsPage() {
               Approve households for tonight&apos;s langar delivery or reject requests that cannot be served.
             </p>
           </div>
-          <span className="recipients-panel__count">{recipients.length} shown</span>
+          <div className="recipients-panel__header-actions">
+            <button
+              type="button"
+              className="recipient-card__button recipient-card__button--approve"
+              onClick={() => setShowStaffIntake((current) => !current)}
+            >
+              {showStaffIntake ? 'Close staff form' : 'Add request for someone'}
+            </button>
+            <span className="recipients-panel__count">{recipients.length} shown</span>
+          </div>
         </div>
+
+        {showStaffIntake && (
+          <div className="recipients-staff-intake">
+            <p className="recipients-staff-intake__title">Staff-assisted intake</p>
+            <p className="recipients-staff-intake__copy">
+              Enter a pending request on behalf of someone who called or visited in person.
+            </p>
+            <StaffRecipientForm
+              mode="create"
+              onCancel={() => setShowStaffIntake(false)}
+              onSaved={handleSaved}
+            />
+          </div>
+        )}
 
         <nav className="recipients-tabs" aria-label="Filter by status">
           {FILTER_TABS.map((tab) => (
@@ -335,8 +418,12 @@ export function RecipientsPage() {
                 <RecipientCard
                   recipient={recipient}
                   savingId={savingId}
+                  editingId={editingId}
                   onApprove={handleApprove}
                   onReject={handleReject}
+                  onEdit={setEditingId}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaved={handleSaved}
                 />
               </li>
             ))}

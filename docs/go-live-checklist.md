@@ -2,7 +2,7 @@
 
 Target: **fully operational v1** for a controlled pilot — manual dispatch, client tracking, driver links, real SMS. Auto routing optimizer is **out of scope** for this pilot.
 
-**Last reviewed:** 2026-06-26
+**Last reviewed:** 2026-07-01
 
 Related trackers: [#6](https://github.com/sarina-aul/langar-seva/issues/6) · [#9](https://github.com/sarina-aul/langar-seva/issues/9) · [#10](https://github.com/sarina-aul/langar-seva/issues/10) · [Board](https://github.com/users/sarina-aul/projects/1)
 
@@ -70,26 +70,26 @@ flowchart LR
 
 ### Day 1–2: Merge and deploy foundation
 
-- [ ] Open PR for local tracking work (migration, pages, Edge Function, tests)
-- [ ] Code review + merge to `main`
+- [x] Open PR for local tracking work (migration, pages, Edge Function, tests)
+- [x] Code review + merge to `main`
 - [ ] Apply `20260626010600_delivery_tracking.sql` to production Supabase
 - [ ] Deploy `send-delivery-tracking-sms` Edge Function
 - [ ] Smoke test: `/track/:token` on production URL
 
 ### Day 3–4: Driver access
 
-- [ ] Add driver magic links (hashed token, expiry, revoke)
-- [ ] Driver page scoped to one route only
-- [ ] Coordinator: resend / revoke driver link from dispatch
-- [ ] Test: invalid / expired driver link shows nothing
+- [x] Add driver magic links (hashed token, expiry, revoke) — `20260627120000_driver_route_links.sql`
+- [x] Driver page scoped to one route only — `/driver/route/:token`
+- [x] Coordinator: resend / revoke driver link from dispatch
+- [x] Test: invalid / expired driver link shows nothing — `scripts/test-delivery-tracking.sql` T09–T17
 
 ### Day 5–7: Real SMS
 
 - [ ] Configure Twilio env vars on Supabase
 - [ ] Send client tracking link via SMS
-- [ ] Send driver route link via SMS
+- [x] Send driver route link via SMS — `send-driver-route-sms` Edge Function (+ dev clipboard fallback)
 - [ ] Log failures in `delivery_notifications`; show in dispatch UI
-- [ ] Dev fallback still works when Twilio not configured
+- [x] Dev fallback still works when Twilio not configured
 
 ---
 
@@ -144,8 +144,8 @@ All must be **yes** before live recipients depend on the system:
 
 | # | Criterion | Ready? |
 |---|-----------|--------|
-| 1 | Tracking code merged and migration applied | ☐ |
-| 2 | Driver magic links work without staff login | ☐ |
+| 1 | Tracking code merged and migration applied | ☐ (local + `main`; prod pending) |
+| 2 | Driver magic links work without staff login | ☑ |
 | 3 | Real SMS sends and failures are visible | ☐ |
 | 4 | Client tracking page works from SMS link on mobile | ☐ |
 | 5 | Security SQL tests pass | ☐ |

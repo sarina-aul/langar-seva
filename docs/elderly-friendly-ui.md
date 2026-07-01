@@ -12,6 +12,86 @@ Guidance for making the recipient-facing experience accessible to elderly users.
 | Recipient UI translations | [#14](https://github.com/sarina-aul/langar-seva/issues/14) |
 | Intake accessibility pass | [#15](https://github.com/sarina-aul/langar-seva/issues/15) |
 
+## Product channels
+
+Langar Seva is a **multi-channel operations platform**, not a single website everyone must use. Different people touch different surfaces; all intake paths write into the same Supabase database and flow through coordinator review.
+
+**One-line framing:** *Operations platform for coordinators, with phone-first intake for seniors and web/SMS for everyone else.*
+
+### Who uses what
+
+| Who | Channel | Role |
+|-----|---------|------|
+| Elderly recipient | **Phone (IVR)** or call coordinator | Request langar — no browser, minimal typing |
+| Caregiver / family | **Web intake form** (optional) | Submit full address and details on someone's behalf |
+| Coordinator | **Web app (staff login)** | Approve requests, complete IVR gaps, dispatch routes, handle exceptions |
+| Kitchen | **Web app (staff login)** | Mark batches ready, meal counts |
+| Sevadar (driver) | **SMS magic link** | Route sheet on phone — no staff login required |
+| Recipient (delivery day) | **SMS** (+ optional tracking link) | Plain-language status; link is optional for families |
+
+### How channels connect
+
+IVR and the web form are **intake front doors**. The app is the **system of record and control center** — approve, route, deliver, track, rebalance. Replacing the WhatsApp group chat with IVR does not replace the app; it replaces unstructured group messages with structured `pending` rows coordinators already manage.
+
+```mermaid
+flowchart TD
+  subgraph intake [Intake — pick one]
+    IVR[Phone: Press 1 to request langar]
+    Web[Web intake form]
+    Staff[Coordinator enters request]
+  end
+
+  subgraph app [App — staff and backend]
+    DB[(Supabase recipients)]
+    Coord[Coordinator dashboard]
+    Kitchen[Kitchen batch]
+    Dispatch[Dispatch and routes]
+  end
+
+  subgraph outbound [Outbound — mostly SMS]
+    Confirm[SMS: request received]
+    Approve[SMS: approved and delivery window]
+    Track[SMS: on the way / delivered]
+    Driver[SMS: sevadar route link]
+  end
+
+  IVR --> DB
+  Web --> DB
+  Staff --> DB
+  DB --> Coord
+  Coord --> Kitchen
+  Coord --> Dispatch
+  Coord --> Confirm
+  Coord --> Approve
+  Dispatch --> Track
+  Dispatch --> Driver
+```
+
+### What IVR does vs what the app does
+
+| IVR is good for | App is required for |
+|-----------------|---------------------|
+| “Press 1 to request langar” | Approving and editing recipient records |
+| Capturing caller phone and intent | Full address, postal code, routing data |
+| Short menus in English / Punjabi / Hindi | Building route bundles and assigning sevadars |
+| After-hours request capture | Kitchen workflow and batch readiness |
+| SMS confirmation after the call | Delivery-day status, exceptions, rebalance |
+
+Typical IVR flow: caller presses 1 → system creates a **`pending`** recipient (phone + defaults) → **SMS**: *“Request received — a coordinator will call to confirm your address.”* → coordinator completes the record in the app → same approve → dispatch → SMS lifecycle as web intake.
+
+### Who still needs the web app?
+
+| User | Uses full web app? |
+|------|-------------------|
+| Elderly recipient | **Rarely** — phone + SMS is enough |
+| Adult child / caregiver | **Sometimes** — intake form or tracking link |
+| Coordinator, kitchen, admin | **Always** — primary product surface |
+| Sevadar | **Light** — route page from SMS link only |
+
+Most elderly recipients never open the web UI. They need **phone + SMS in their language**. The web UI remains an optional, simplified path for caregivers and tech-comfortable seniors — see [Target experience for elderly recipients](#target-experience-for-elderly-recipients) below.
+
+Pilot scope note: IVR is **post-pilot / v1.1** (Tier 3). The [go-live checklist](go-live-checklist.md) focuses on SMS tracking and manual dispatch first; this section documents the long-term channel model so intake work (phone, web, coordinator) is not confused with “building a recipient website.”
+
 ## What works well for older adults
 
 | Principle | What it means |
@@ -103,9 +183,9 @@ Tracking page has large status text (good), but updates depend on opening an SMS
 ```mermaid
 flowchart TD
   A[Sees flyer or hears from Gurdwara] --> B{Comfortable on phone browser?}
-  B -->|No| C[Calls coordinator]
+  B -->|No| C[Calls Gurdwara number — IVR or coordinator]
   B -->|Yes| D[Simple wizard in Punjabi/Hindi]
-  C --> E[Coordinator enters request]
+  C --> E[Pending request in system]
   D --> E
   E --> F[SMS: Request received]
   F --> G[SMS: Approved + delivery day]
@@ -134,3 +214,4 @@ Existing tokens (warm cream, dignified tone) can stay. Elderly-friendly UI does 
 - `docs/go-live-checklist.md` — SMS and tracking pilot readiness
 - `docs/delivery-tracking-next-steps.md` — Client tracking via SMS links
 - `docs/delivery-routing-plan.md` — Senior priority flags (planned)
+- Twilio Voice / IVR intake — planned v1.1; see [Product channels](#product-channels) above

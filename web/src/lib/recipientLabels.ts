@@ -2,6 +2,7 @@ import type {
   ContactPref,
   DeliveryFrequency,
   DeliveryWindow,
+  IntakeChannel,
   LanguagePref,
   RecipientRow,
   RecipientStatus,
@@ -43,6 +44,12 @@ export const RECIPIENT_STATUS_LABELS: Record<RecipientStatus, string> = {
   rejected: 'Rejected',
 }
 
+export const INTAKE_CHANNEL_LABELS: Record<IntakeChannel, string> = {
+  web: 'Web form',
+  ivr: 'Phone (IVR)',
+  staff: 'Staff entry',
+}
+
 export const DELIVERY_WINDOW_OPTIONS: { value: DeliveryWindow; label: string }[] = [
   { value: 'morning', label: DELIVERY_WINDOW_LABELS.morning },
   { value: 'afternoon', label: DELIVERY_WINDOW_LABELS.afternoon },
@@ -72,7 +79,7 @@ export const CONTACT_PREF_OPTIONS: { value: ContactPref; label: string }[] = [
 ]
 
 export function formatRecipientAddress(recipient: Pick<RecipientRow, 'address' | 'unit_buzz'>): string {
-  if (recipient.unit_buzz) {
+  if (recipient.unit_buzz && recipient.unit_buzz !== 'none') {
     return `${recipient.address}, ${recipient.unit_buzz}`
   }
   return recipient.address

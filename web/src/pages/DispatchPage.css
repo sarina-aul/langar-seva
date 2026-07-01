@@ -250,6 +250,14 @@
   color: rgba(15, 26, 46, 0.62);
 }
 
+.dispatch-route-card__driver-link {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-style: normal;
+}
+
 .dispatch-route-card__header > span {
   flex-shrink: 0;
   font-family: var(--font-display);
