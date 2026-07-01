@@ -6,6 +6,7 @@ import {
   estimateStopEta,
   formatEtaWindow,
 } from '../lib/deliveryTracking'
+import { buildAppUrl, copyTextToClipboard } from '../lib/appUrl'
 import { DELIVERY_WINDOW_LABELS, formatRecipientAddress } from '../lib/recipientLabels'
 import { isValidPostalCode, normalizePostalCode, POSTAL_CODE_HINT } from '../lib/postalCode'
 import { getSupabase } from '../lib/supabase'
@@ -85,6 +86,35 @@ function canTextSevadar(sevadar: SevadarRow | null): boolean {
   return Boolean(sevadar?.phone?.trim())
 }
 
+const DRIVER_LINKS_STORAGE_KEY = 'langar-dev-driver-links'
+const TRACKING_LINKS_STORAGE_KEY = 'langar-dev-tracking-links'
+
+function readStoredLinks(key: string): Record<string, string> {
+  try {
+    return JSON.parse(sessionStorage.getItem(key) ?? '{}') as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
+function storeLink(key: string, id: string, url: string) {
+  const links = readStoredLinks(key)
+  links[id] = url
+  sessionStorage.setItem(key, JSON.stringify(links))
+}
+
+function removeStoredLink(key: string, id: string) {
+  const links = readStoredLinks(key)
+  delete links[id]
+  sessionStorage.setItem(key, JSON.stringify(links))
+}
+
+interface StatusNotice {
+  message: string
+  url?: string
+  urlLabel?: string
+}
+
 export function DispatchPage() {
   const [batch, setBatch] = useState<BatchRow | null>(null)
   const [approvedRecipients, setApprovedRecipients] = useState<RecipientRow[]>([])
@@ -92,7 +122,13 @@ export function DispatchPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [statusNotice, setStatusNotice] = useState<StatusNotice | null>(null)
+  const [driverLinks, setDriverLinks] = useState<Record<string, string>>(() =>
+    readStoredLinks(DRIVER_LINKS_STORAGE_KEY),
+  )
+  const [trackingLinks, setTrackingLinks] = useState<Record<string, string>>(() =>
+    readStoredLinks(TRACKING_LINKS_STORAGE_KEY),
+  )
   const [routeName, setRouteName] = useState('Route 1')
   const [sevadarName, setSevadarName] = useState('')
   const [sevadarPhone, setSevadarPhone] = useState('')
@@ -322,7 +358,7 @@ export function DispatchPage() {
 
     setSaving(true)
     setError(null)
-    setStatusMessage(null)
+    setStatusNotice(null)
 
     const origin = window.location.origin
     const { data: functionData, error: functionError } = await getSupabase().functions.invoke(
@@ -337,12 +373,22 @@ export function DispatchPage() {
 
     if (!functionError && functionData && typeof functionData === 'object') {
       const result = functionData as { trackingUrl?: string; mode?: string }
+      if (result.trackingUrl) {
+        storeLink(TRACKING_LINKS_STORAGE_KEY, entry.id, result.trackingUrl)
+        setTrackingLinks((current) => ({ ...current, [entry.id]: result.trackingUrl! }))
+      }
       await loadRoutes(batch.id)
-      setStatusMessage(
-        result.mode === 'logged'
-          ? `Tracking link logged for development: ${result.trackingUrl ?? 'created'}`
-          : 'Tracking SMS queued for this recipient.',
-      )
+      const copied = result.trackingUrl ? await copyTextToClipboard(result.trackingUrl) : false
+      setStatusNotice({
+        message:
+          result.mode === 'logged'
+            ? copied
+              ? 'Tracking link copied to clipboard.'
+              : 'Tracking link ready — open it below.'
+            : 'Tracking SMS queued for this recipient.',
+        url: result.trackingUrl,
+        urlLabel: 'Open client tracking page',
+      })
       setSaving(false)
       return
     }
@@ -362,48 +408,63 @@ export function DispatchPage() {
       p_provider_message_id: null,
     })
 
-    const trackingUrl = `${origin}/track/${data[0].tracking_token}`
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(trackingUrl)
-    }
+    const trackingUrl = buildAppUrl(origin, `/track/${data[0].tracking_token}`)
+    storeLink(TRACKING_LINKS_STORAGE_KEY, entry.id, trackingUrl)
+    setTrackingLinks((current) => ({ ...current, [entry.id]: trackingUrl }))
+    const copied = await copyTextToClipboard(trackingUrl)
 
     await loadRoutes(batch.id)
-    setStatusMessage(`Tracking link copied for development: ${trackingUrl}`)
+    setStatusNotice({
+      message: copied
+        ? 'Tracking link copied to clipboard.'
+        : 'Tracking link ready — open it below (clipboard blocked by browser).',
+      url: trackingUrl,
+      urlLabel: 'Open client tracking page',
+    })
     setSaving(false)
   }
 
   async function handleSendDriverRouteLink(route: DispatchRouteWithDetails) {
     if (!batch) return
-    if (!canTextSevadar(route.sevadar)) {
-      setError('Enter a sevadar phone number on this route before sending the driver link.')
-      return
-    }
 
     setSaving(true)
     setError(null)
-    setStatusMessage(null)
+    setStatusNotice(null)
 
     const origin = window.location.origin
-    const { data: functionData, error: functionError } = await getSupabase().functions.invoke(
-      'send-driver-route-sms',
-      {
-        body: {
-          routeId: route.id,
-          origin,
-        },
-      },
-    )
 
-    if (!functionError && functionData && typeof functionData === 'object') {
-      const result = functionData as { routeUrl?: string; mode?: string }
-      await loadRoutes(batch.id)
-      setStatusMessage(
-        result.mode === 'logged'
-          ? `Driver route link logged for development: ${result.routeUrl ?? 'created'}`
-          : 'Driver route SMS queued for this sevadar.',
+    if (canTextSevadar(route.sevadar)) {
+      const { data: functionData, error: functionError } = await getSupabase().functions.invoke(
+        'send-driver-route-sms',
+        {
+          body: {
+            routeId: route.id,
+            origin,
+          },
+        },
       )
-      setSaving(false)
-      return
+
+      if (!functionError && functionData && typeof functionData === 'object') {
+        const result = functionData as { routeUrl?: string; mode?: string }
+        if (result.routeUrl) {
+          storeLink(DRIVER_LINKS_STORAGE_KEY, route.id, result.routeUrl)
+          setDriverLinks((current) => ({ ...current, [route.id]: result.routeUrl! }))
+        }
+        await loadRoutes(batch.id)
+        const copied = result.routeUrl ? await copyTextToClipboard(result.routeUrl) : false
+        setStatusNotice({
+          message:
+            result.mode === 'logged'
+              ? copied
+                ? 'Driver route link copied to clipboard.'
+                : 'Driver route link ready — open it below.'
+              : 'Driver route SMS queued for this sevadar.',
+          url: result.routeUrl,
+          urlLabel: 'Open driver route page',
+        })
+        setSaving(false)
+        return
+      }
     }
 
     const { data, error: rpcError } = await getSupabase().rpc('create_driver_route_link', {
@@ -421,13 +482,19 @@ export function DispatchPage() {
       p_provider_message_id: null,
     })
 
-    const routeUrl = `${origin}/driver/route/${data[0].route_token}`
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(routeUrl)
-    }
+    const routeUrl = buildAppUrl(origin, `/driver/route/${data[0].route_token}`)
+    storeLink(DRIVER_LINKS_STORAGE_KEY, route.id, routeUrl)
+    setDriverLinks((current) => ({ ...current, [route.id]: routeUrl }))
+    const copied = await copyTextToClipboard(routeUrl)
 
     await loadRoutes(batch.id)
-    setStatusMessage(`Driver route link copied for development: ${routeUrl}`)
+    setStatusNotice({
+      message: copied
+        ? 'Driver route link copied to clipboard.'
+        : 'Driver route link ready — open it below (clipboard blocked by browser).',
+      url: routeUrl,
+      urlLabel: 'Open driver route page',
+    })
     setSaving(false)
   }
 
@@ -445,8 +512,14 @@ export function DispatchPage() {
       setError('Could not revoke the driver route link.')
       return
     }
+    removeStoredLink(DRIVER_LINKS_STORAGE_KEY, route.id)
+    setDriverLinks((current) => {
+      const next = { ...current }
+      delete next[route.id]
+      return next
+    })
     await loadRoutes(batch.id)
-    setStatusMessage('Driver route link revoked.')
+    setStatusNotice({ message: 'Driver route link revoked.' })
   }
 
   async function handleUpdateStop(entry: RouteRecipient, updates: Partial<DispatchRouteRecipientRow>) {
@@ -518,9 +591,17 @@ export function DispatchPage() {
         </div>
       )}
 
-      {!loading && statusMessage && (
+      {!loading && statusNotice && (
         <div className="dispatch-alert dispatch-alert--success" role="status">
-          {statusMessage}
+          <p>{statusNotice.message}</p>
+          {statusNotice.url && (
+            <p className="dispatch-dev-link">
+              <a href={statusNotice.url} target="_blank" rel="noreferrer">
+                {statusNotice.urlLabel ?? 'Open link'}
+              </a>
+              <span className="dispatch-dev-link__url">{statusNotice.url}</span>
+            </p>
+          )}
         </div>
       )}
 
@@ -676,6 +757,13 @@ export function DispatchPage() {
                           Driver link: {magicLinkStatus(route.driverLink, 'No driver link yet')}
                           {!canTextSevadar(route.sevadar) ? ' · SMS unavailable' : ''}
                         </p>
+                        {driverLinks[route.id] && (
+                          <p className="dispatch-dev-link">
+                            <a href={driverLinks[route.id]} target="_blank" rel="noreferrer">
+                              Open driver route page
+                            </a>
+                          </p>
+                        )}
                       </div>
                       <span>{route.recipients.reduce((sum, entry) => sum + entry.meals, 0)} meals</span>
                     </div>
@@ -685,7 +773,12 @@ export function DispatchPage() {
                           <span>{entry.stop_order}</span>
                           <div>
                             <strong>{entry.recipient?.name ?? 'Recipient'}</strong>
-                            <small>{entry.recipient ? formatRecipientAddress(entry.recipient) : ''}</small>
+                            <small>
+                              {entry.recipient?.postal_code
+                                ? `${entry.recipient.postal_code} · `
+                                : 'No postal code · '}
+                              {entry.recipient ? formatRecipientAddress(entry.recipient) : ''}
+                            </small>
                             <small>
                               {DELIVERY_STOP_STATUS_LABELS[entry.delivery_status]} · {formatEtaWindow(entry.eta_start, entry.eta_end)}
                             </small>
@@ -693,6 +786,13 @@ export function DispatchPage() {
                               Tracking: {magicLinkStatus(entry.trackingLink, 'No link yet')}
                               {!canTextRecipient(entry.recipient) ? ' · SMS unavailable' : ''}
                             </small>
+                            {trackingLinks[entry.id] && (
+                              <small className="dispatch-dev-link">
+                                <a href={trackingLinks[entry.id]} target="_blank" rel="noreferrer">
+                                  Open client tracking page
+                                </a>
+                              </small>
+                            )}
                           </div>
                           <div className="dispatch-route-card__stop-actions">
                             <button
@@ -721,10 +821,10 @@ export function DispatchPage() {
                       <button
                         type="button"
                         className="dispatch-button dispatch-button--primary"
-                        disabled={saving || !canTextSevadar(route.sevadar)}
+                        disabled={saving}
                         onClick={() => void handleSendDriverRouteLink(route)}
                       >
-                        {route.driverLink?.sent_at ? 'Resend driver link' : 'Send driver link'}
+                        {route.driverLink?.sent_at ? 'Resend driver link' : 'Create driver link'}
                       </button>
                       {route.driverLink && !route.driverLink.revoked_at && (
                         <button
