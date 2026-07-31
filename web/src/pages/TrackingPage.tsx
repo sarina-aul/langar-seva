@@ -48,11 +48,20 @@ export function TrackingPage() {
       void loadTracking()
     })
 
-    const intervalId = window.setInterval(() => {
-      void loadTracking()
-    }, 20000)
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void loadTracking()
+      }
+    }
 
-    return () => window.clearInterval(intervalId)
+    // Poll often enough for SC-003 ("within seconds") while the tab is visible.
+    const intervalId = window.setInterval(refreshIfVisible, 5000)
+    document.addEventListener('visibilitychange', refreshIfVisible)
+
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', refreshIfVisible)
+    }
   }, [loadTracking])
 
   return (

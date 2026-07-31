@@ -67,6 +67,12 @@ Deno.serve(async (request) => {
 
   const sevadar = (routeData as { sevadars?: { name: string; phone: string | null } | null }).sevadars
   if (!sevadar?.phone) {
+    await supabase.from('delivery_notifications').insert({
+      route_id: body.routeId,
+      event_type: 'driver_route_link_sent',
+      status: 'skipped',
+      error: 'Sevadar phone number is required to send the route link.',
+    })
     return jsonResponse({ error: 'Sevadar phone number is required to send the route link.' }, 400)
   }
 
@@ -87,6 +93,12 @@ Deno.serve(async (request) => {
       providerMessageId,
     })
   } catch (error) {
+    await supabase.from('delivery_notifications').insert({
+      route_id: body.routeId,
+      event_type: 'driver_route_link_sent',
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'SMS send failed.',
+    })
     return jsonResponse(
       {
         error: error instanceof Error ? error.message : 'SMS send failed.',

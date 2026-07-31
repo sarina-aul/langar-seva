@@ -2,7 +2,7 @@
 
 Target: **fully operational v1** for a controlled pilot — manual dispatch, client tracking, driver links, real SMS. Auto routing optimizer is **out of scope** for this pilot.
 
-**Last reviewed:** 2026-07-01
+**Last reviewed:** 2026-07-31
 
 Related trackers: [#6](https://github.com/sarina-aul/langar-seva/issues/6) · [#9](https://github.com/sarina-aul/langar-seva/issues/9) · [#10](https://github.com/sarina-aul/langar-seva/issues/10) · [Board](https://github.com/users/sarina-aul/projects/1)
 
@@ -86,9 +86,9 @@ flowchart LR
 ### Day 5–7: Real SMS
 
 - [ ] Configure Twilio env vars on Supabase
-- [ ] Send client tracking link via SMS
-- [x] Send driver route link via SMS — `send-driver-route-sms` Edge Function (+ dev clipboard fallback)
-- [ ] Log failures in `delivery_notifications`; show in dispatch UI
+- [x] Send client tracking link via SMS — `send-delivery-tracking-sms` Edge Function (+ logged/dev mode)
+- [x] Send driver route link via SMS — `send-driver-route-sms` Edge Function (+ logged/dev mode)
+- [x] Log failures in `delivery_notifications`; show in dispatch UI (retryable)
 - [x] Dev fallback still works when Twilio not configured
 
 ---
@@ -146,7 +146,7 @@ All must be **yes** before live recipients depend on the system:
 |---|-----------|--------|
 | 1 | Tracking code merged and migration applied | ☐ (local + `main`; prod pending) |
 | 2 | Driver magic links work without staff login | ☑ |
-| 3 | Real SMS sends and failures are visible | ☐ |
+| 3 | Real SMS sends and failures are visible | ☑ code ready (prod Twilio pending) |
 | 4 | Client tracking page works from SMS link on mobile | ☐ |
 | 5 | Security SQL tests pass | ☐ |
 | 6 | Dry run completed with no P0 bugs | ☐ |

@@ -213,8 +213,9 @@ export interface DriverRouteLinkRow {
 }
 
 export interface DeliveryNotificationInsert {
-  route_recipient_id: string
-  recipient_id: string
+  route_recipient_id?: string | null
+  recipient_id?: string | null
+  route_id?: string | null
   channel?: 'sms'
   event_type:
     | 'tracking_link_created'
@@ -231,6 +232,9 @@ export interface DeliveryNotificationInsert {
 export interface DeliveryNotificationRow extends DeliveryNotificationInsert {
   id: string
   created_at: string
+  route_recipient_id: string | null
+  recipient_id: string | null
+  route_id: string | null
   channel: 'sms'
   status: DeliveryNotificationStatus
   provider_message_id: string | null

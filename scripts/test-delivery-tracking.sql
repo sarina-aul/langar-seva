@@ -301,6 +301,41 @@ DO $$ DECLARE payload json; BEGIN
   );
 END $$;
 
+RESET ROLE; SELECT set_jwt('coordinator'); SET LOCAL ROLE authenticated;
+DO $$ DECLARE
+  stop_id uuid;
+  revoked timestamptz;
+BEGIN
+  SELECT route_stop_id INTO stop_id FROM tracking_context LIMIT 1;
+  PERFORM public.revoke_delivery_tracking_link(stop_id);
+  SELECT revoked_at INTO revoked
+  FROM public.delivery_tracking_links
+  WHERE route_recipient_id = stop_id;
+  INSERT INTO tracking_results VALUES (
+    'T18 revoke client tracking link',
+    CASE WHEN revoked IS NOT NULL THEN 'PASS' ELSE 'FAIL' END,
+    coalesce(revoked::text, 'null')
+  );
+END $$;
+
+DO $$ DECLARE
+  target_route uuid;
+  notif_count integer;
+BEGIN
+  SELECT route_id INTO target_route FROM driver_context LIMIT 1;
+  PERFORM public.mark_driver_route_link_sent(target_route, null);
+  SELECT count(*) INTO notif_count
+  FROM public.delivery_notifications n
+  WHERE n.route_id = target_route
+    AND n.event_type = 'driver_route_link_sent'
+    AND n.status = 'logged';
+  INSERT INTO tracking_results VALUES (
+    'T19 driver SMS logged to notifications',
+    CASE WHEN notif_count >= 1 THEN 'PASS' ELSE 'FAIL' END,
+    'count='||notif_count::text
+  );
+END $$;
+
 RESET ROLE;
 SELECT test, result, detail FROM tracking_results ORDER BY test;
 
