@@ -11,6 +11,8 @@ import { isValidPostalCode, normalizePostalCode, POSTAL_CODE_HINT } from '../lib
 import { getSupabase } from '../lib/supabase'
 import type {
   BatchRow,
+  DeliveryNotificationRow,
+  DeliveryNotificationStatus,
   DeliveryStopStatus,
   DeliveryTrackingLinkRow,
   DriverRouteLinkRow,
@@ -33,6 +35,7 @@ interface RouteRecipient {
   client_visible_note: string | null
   delivered_at: string | null
   trackingLink: DeliveryTrackingLinkRow | null
+  lastNotification: DeliveryNotificationRow | null
   recipient: RecipientRow | null
 }
 
@@ -40,6 +43,7 @@ interface DispatchRouteWithDetails extends DispatchRouteRow {
   sevadar: SevadarRow | null
   recipients: RouteRecipient[]
   driverLink: DriverRouteLinkRow | null
+  lastDriverNotification: DeliveryNotificationRow | null
 }
 
 function todayIso(): string {
@@ -85,6 +89,42 @@ function canTextSevadar(sevadar: SevadarRow | null): boolean {
   return Boolean(sevadar?.phone?.trim())
 }
 
+function latestNotification(
+  rows: DeliveryNotificationRow[] | DeliveryNotificationRow | null | undefined,
+): DeliveryNotificationRow | null {
+  if (!rows) return null
+  const list = Array.isArray(rows) ? rows : [rows]
+  if (list.length === 0) return null
+  return [...list].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0]
+}
+
+function notificationLabel(status: DeliveryNotificationStatus | undefined): string | null {
+  switch (status) {
+    case 'failed':
+      return 'SMS failed'
+    case 'skipped':
+      return 'SMS skipped'
+    case 'logged':
+      return 'SMS logged (dev)'
+    case 'sent':
+      return 'SMS sent'
+    case 'queued':
+      return 'SMS queued'
+    default:
+      return null
+  }
+}
+
+function recipientReadinessIssues(recipient: RecipientRow): string[] {
+  const issues: string[] = []
+  if (!recipient.postal_code?.trim()) issues.push('missing postal code')
+  if (!recipient.phone?.trim()) issues.push('missing phone')
+  if (recipient.contact_pref === 'phone') issues.push('phone-only (no SMS)')
+  return issues
+}
+
 export function DispatchPage() {
   const [batch, setBatch] = useState<BatchRow | null>(null)
   const [approvedRecipients, setApprovedRecipients] = useState<RecipientRow[]>([])
@@ -112,6 +152,10 @@ export function DispatchPage() {
     (sum, route) => sum + route.recipients.reduce((routeSum, entry) => routeSum + entry.meals, 0),
     0,
   )
+  const readinessWarnings = availableRecipients.flatMap((recipient) => {
+    const issues = recipientReadinessIssues(recipient)
+    return issues.length > 0 ? [`${recipient.name}: ${issues.join(', ')}`] : []
+  })
 
   const loadRoutes = useCallback(async (batchId: string) => {
     const { data, error: routesError } = await getSupabase()
@@ -121,6 +165,7 @@ export function DispatchPage() {
           *,
           sevadars (*),
           driver_route_links (*),
+          delivery_notifications (*),
           dispatch_route_recipients (
             id,
             stop_order,
@@ -132,6 +177,7 @@ export function DispatchPage() {
             client_visible_note,
             delivered_at,
             delivery_tracking_links (*),
+            delivery_notifications (*),
             recipients (*)
           )
         `,
@@ -148,6 +194,7 @@ export function DispatchPage() {
       const row = route as DispatchRouteRow & {
         sevadars?: SevadarRow | null
         driver_route_links?: DriverRouteLinkRow[] | DriverRouteLinkRow | null
+        delivery_notifications?: DeliveryNotificationRow[] | DeliveryNotificationRow | null
         dispatch_route_recipients?: Array<{
           id: string
           stop_order: number
@@ -159,6 +206,7 @@ export function DispatchPage() {
           client_visible_note: string | null
           delivered_at: string | null
           delivery_tracking_links?: DeliveryTrackingLinkRow[] | DeliveryTrackingLinkRow | null
+          delivery_notifications?: DeliveryNotificationRow[] | DeliveryNotificationRow | null
           recipients?: RecipientRow | null
         }>
       }
@@ -168,6 +216,7 @@ export function DispatchPage() {
         driverLink: Array.isArray(row.driver_route_links)
           ? row.driver_route_links[0] ?? null
           : row.driver_route_links ?? null,
+        lastDriverNotification: latestNotification(row.delivery_notifications),
         recipients: (row.dispatch_route_recipients ?? [])
           .map((entry) => ({
             id: entry.id,
@@ -182,6 +231,7 @@ export function DispatchPage() {
             trackingLink: Array.isArray(entry.delivery_tracking_links)
               ? entry.delivery_tracking_links[0] ?? null
               : entry.delivery_tracking_links ?? null,
+            lastNotification: latestNotification(entry.delivery_notifications),
             recipient: entry.recipients ?? null,
           }))
           .sort((a, b) => a.stop_order - b.stop_order),
@@ -335,41 +385,54 @@ export function DispatchPage() {
       },
     )
 
-    if (!functionError && functionData && typeof functionData === 'object') {
-      const result = functionData as { trackingUrl?: string; mode?: string }
+    const result =
+      functionData && typeof functionData === 'object'
+        ? (functionData as { error?: string; trackingUrl?: string; mode?: string; ok?: boolean })
+        : null
+
+    if (result?.ok || result?.mode === 'sent' || result?.mode === 'logged') {
       await loadRoutes(batch.id)
       setStatusMessage(
         result.mode === 'logged'
           ? `Tracking link logged for development: ${result.trackingUrl ?? 'created'}`
-          : 'Tracking SMS queued for this recipient.',
+          : 'Tracking SMS sent for this recipient.',
       )
       setSaving(false)
       return
     }
 
-    const { data, error: rpcError } = await getSupabase().rpc('create_delivery_tracking_link', {
-      p_route_recipient_id: entry.id,
-    })
+    if (result?.error || functionError) {
+      await loadRoutes(batch.id)
+      // Edge Function missing locally — fall back to clipboard without marking a false success.
+      if (!result && functionError) {
+        const { data, error: rpcError } = await getSupabase().rpc('create_delivery_tracking_link', {
+          p_route_recipient_id: entry.id,
+        })
 
-    if (rpcError || !data?.[0]?.tracking_token) {
+        if (rpcError || !data?.[0]?.tracking_token) {
+          setSaving(false)
+          setError(functionError.message || 'Could not create the tracking link.')
+          return
+        }
+
+        const trackingUrl = `${origin}/track/${data[0].tracking_token}`
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(trackingUrl)
+        }
+
+        await loadRoutes(batch.id)
+        setStatusMessage(`Edge Function unavailable — tracking link copied for development: ${trackingUrl}`)
+        setSaving(false)
+        return
+      }
+
       setSaving(false)
-      setError('Could not create the tracking link.')
+      setError(result?.error ?? functionError?.message ?? 'Tracking SMS failed. Retry from this stop.')
       return
     }
 
-    await getSupabase().rpc('mark_delivery_tracking_link_sent', {
-      p_route_recipient_id: entry.id,
-      p_provider_message_id: null,
-    })
-
-    const trackingUrl = `${origin}/track/${data[0].tracking_token}`
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(trackingUrl)
-    }
-
-    await loadRoutes(batch.id)
-    setStatusMessage(`Tracking link copied for development: ${trackingUrl}`)
     setSaving(false)
+    setError('Tracking SMS failed. Retry from this stop.')
   }
 
   async function handleSendDriverRouteLink(route: DispatchRouteWithDetails) {
@@ -394,41 +457,53 @@ export function DispatchPage() {
       },
     )
 
-    if (!functionError && functionData && typeof functionData === 'object') {
-      const result = functionData as { routeUrl?: string; mode?: string }
+    const result =
+      functionData && typeof functionData === 'object'
+        ? (functionData as { error?: string; routeUrl?: string; mode?: string; ok?: boolean })
+        : null
+
+    if (result?.ok || result?.mode === 'sent' || result?.mode === 'logged') {
       await loadRoutes(batch.id)
       setStatusMessage(
         result.mode === 'logged'
           ? `Driver route link logged for development: ${result.routeUrl ?? 'created'}`
-          : 'Driver route SMS queued for this sevadar.',
+          : 'Driver route SMS sent for this sevadar.',
       )
       setSaving(false)
       return
     }
 
-    const { data, error: rpcError } = await getSupabase().rpc('create_driver_route_link', {
-      p_route_id: route.id,
-    })
+    if (result?.error || functionError) {
+      await loadRoutes(batch.id)
+      if (!result && functionError) {
+        const { data, error: rpcError } = await getSupabase().rpc('create_driver_route_link', {
+          p_route_id: route.id,
+        })
 
-    if (rpcError || !data?.[0]?.route_token) {
+        if (rpcError || !data?.[0]?.route_token) {
+          setSaving(false)
+          setError(functionError.message || 'Could not create the driver route link.')
+          return
+        }
+
+        const routeUrl = `${origin}/driver/route/${data[0].route_token}`
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(routeUrl)
+        }
+
+        await loadRoutes(batch.id)
+        setStatusMessage(`Edge Function unavailable — driver route link copied for development: ${routeUrl}`)
+        setSaving(false)
+        return
+      }
+
       setSaving(false)
-      setError('Could not create the driver route link.')
+      setError(result?.error ?? functionError?.message ?? 'Driver route SMS failed. Retry from this route.')
       return
     }
 
-    await getSupabase().rpc('mark_driver_route_link_sent', {
-      p_route_id: route.id,
-      p_provider_message_id: null,
-    })
-
-    const routeUrl = `${origin}/driver/route/${data[0].route_token}`
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(routeUrl)
-    }
-
-    await loadRoutes(batch.id)
-    setStatusMessage(`Driver route link copied for development: ${routeUrl}`)
     setSaving(false)
+    setError('Driver route SMS failed. Retry from this route.')
   }
 
   async function handleRevokeDriverRouteLink(route: DispatchRouteWithDetails) {
@@ -449,6 +524,24 @@ export function DispatchPage() {
     setStatusMessage('Driver route link revoked.')
   }
 
+  async function handleRevokeTrackingLink(entry: RouteRecipient) {
+    if (!batch) return
+    setSaving(true)
+    setError(null)
+
+    const { error: revokeError } = await getSupabase().rpc('revoke_delivery_tracking_link', {
+      p_route_recipient_id: entry.id,
+    })
+
+    setSaving(false)
+    if (revokeError) {
+      setError('Could not revoke the tracking link.')
+      return
+    }
+    await loadRoutes(batch.id)
+    setStatusMessage('Client tracking link revoked.')
+  }
+
   async function handleUpdateStop(entry: RouteRecipient, updates: Partial<DispatchRouteRecipientRow>) {
     if (!batch) return
     setSaving(true)
@@ -465,6 +558,25 @@ export function DispatchPage() {
       return
     }
     await loadRoutes(batch.id)
+  }
+
+  async function handleMarkDelayed(entry: RouteRecipient) {
+    const eta = estimateStopEta(new Date(), entry.stop_order)
+    await handleUpdateStop(entry, {
+      delivery_status: 'delayed',
+      eta_start: eta.eta_start,
+      eta_end: eta.eta_end,
+    })
+  }
+
+  async function handleBumpEta(entry: RouteRecipient) {
+    const base = entry.eta_end ? new Date(entry.eta_end) : new Date()
+    base.setMinutes(base.getMinutes() + 15)
+    const eta = estimateStopEta(base, 1)
+    await handleUpdateStop(entry, {
+      eta_start: eta.eta_start,
+      eta_end: eta.eta_end,
+    })
   }
 
   async function updateBatchStatus(status: 'pickup' | 'dispatched') {
@@ -616,11 +728,23 @@ export function DispatchPage() {
                   <p>Approved recipients</p>
                   <span>{selectedMeals} meals selected</span>
                 </div>
+                {readinessWarnings.length > 0 && (
+                  <div className="dispatch-alert dispatch-alert--warn" role="status">
+                    <p>Routing readiness warnings:</p>
+                    <ul>
+                      {readinessWarnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {availableRecipients.length === 0 ? (
                   <p className="dispatch-recipient-picker__empty">No approved recipients are waiting for route assignment.</p>
                 ) : (
                   <div className="dispatch-recipient-picker__list">
-                    {availableRecipients.map((recipient) => (
+                    {availableRecipients.map((recipient) => {
+                      const issues = recipientReadinessIssues(recipient)
+                      return (
                       <label key={recipient.id} className="dispatch-recipient-option">
                         <input
                           type="checkbox"
@@ -639,10 +763,12 @@ export function DispatchPage() {
                             {recipient.meals} meals · {DELIVERY_WINDOW_LABELS[recipient.delivery_window]}
                             {recipient.postal_code ? ` · ${recipient.postal_code}` : ' · No postal code'} ·{' '}
                             {formatRecipientAddress(recipient)}
+                            {issues.length > 0 ? ` · Needs: ${issues.join(', ')}` : ''}
                           </small>
                         </span>
                       </label>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -675,12 +801,27 @@ export function DispatchPage() {
                         <p className="dispatch-route-card__driver-link">
                           Driver link: {magicLinkStatus(route.driverLink, 'No driver link yet')}
                           {!canTextSevadar(route.sevadar) ? ' · SMS unavailable' : ''}
+                          {route.lastDriverNotification
+                            ? ` · ${notificationLabel(route.lastDriverNotification.status)}`
+                            : ''}
                         </p>
+                        {route.lastDriverNotification?.status === 'failed' && (
+                          <p className="dispatch-sms-failure" role="alert">
+                            Driver SMS failed
+                            {route.lastDriverNotification.error
+                              ? `: ${route.lastDriverNotification.error}`
+                              : ''}
+                            . Retry with “Resend driver link”.
+                          </p>
+                        )}
                       </div>
                       <span>{route.recipients.reduce((sum, entry) => sum + entry.meals, 0)} meals</span>
                     </div>
                     <ol className="dispatch-route-card__stops">
-                      {route.recipients.map((entry) => (
+                      {route.recipients.map((entry) => {
+                        const smsLabel = notificationLabel(entry.lastNotification?.status)
+                        const smsFailed = entry.lastNotification?.status === 'failed'
+                        return (
                         <li key={entry.id}>
                           <span>{entry.stop_order}</span>
                           <div>
@@ -692,7 +833,17 @@ export function DispatchPage() {
                             <small>
                               Tracking: {magicLinkStatus(entry.trackingLink, 'No link yet')}
                               {!canTextRecipient(entry.recipient) ? ' · SMS unavailable' : ''}
+                              {smsLabel ? ` · ${smsLabel}` : ''}
                             </small>
+                            {smsFailed && (
+                              <p className="dispatch-sms-failure" role="alert">
+                                Tracking SMS failed
+                                {entry.lastNotification?.error
+                                  ? `: ${entry.lastNotification.error}`
+                                  : ''}
+                                . Use Retry SMS.
+                              </p>
+                            )}
                           </div>
                           <div className="dispatch-route-card__stop-actions">
                             <button
@@ -701,8 +852,22 @@ export function DispatchPage() {
                               disabled={saving || !canTextRecipient(entry.recipient)}
                               onClick={() => void handleSendTrackingLink(entry)}
                             >
-                              {entry.trackingLink?.sent_at ? 'Resend link' : 'Send link'}
+                              {smsFailed
+                                ? 'Retry SMS'
+                                : entry.trackingLink?.sent_at
+                                  ? 'Resend link'
+                                  : 'Send link'}
                             </button>
+                            {entry.trackingLink && !entry.trackingLink.revoked_at && (
+                              <button
+                                type="button"
+                                className="dispatch-button"
+                                disabled={saving}
+                                onClick={() => void handleRevokeTrackingLink(entry)}
+                              >
+                                Revoke link
+                              </button>
+                            )}
                             {entry.delivery_status !== 'delivered' && (
                               <button
                                 type="button"
@@ -713,9 +878,28 @@ export function DispatchPage() {
                                 Delivered
                               </button>
                             )}
+                            {entry.delivery_status !== 'delayed' && entry.delivery_status !== 'delivered' && (
+                              <button
+                                type="button"
+                                className="dispatch-button"
+                                disabled={saving}
+                                onClick={() => void handleMarkDelayed(entry)}
+                              >
+                                Mark delayed
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="dispatch-button"
+                              disabled={saving}
+                              onClick={() => void handleBumpEta(entry)}
+                            >
+                              +15 min ETA
+                            </button>
                           </div>
                         </li>
-                      ))}
+                        )
+                      })}
                     </ol>
                     <div className="dispatch-route-card__actions">
                       <button

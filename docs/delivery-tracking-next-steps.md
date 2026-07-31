@@ -6,15 +6,26 @@ Turn the current delivery tracking demo into a real operating flow:
 
 Coordinator assigns a route, the sevadar receives a private route link, the sevadar updates stop progress, and each client sees a private package-style status page with an ETA window.
 
+## Phase status
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 1 Driver access | **Done** | Magic links, revoke/resend, scoped public page, staff fallback, SQL T09–T17 |
+| 2 Real SMS | **Code done** | Edge Functions + failure logging + dispatch UI. Prod Twilio / deploy still ops |
+| 3 Stop workflow polish | **Done (v1)** | Revoke client link, mark delayed, +15 ETA, driver ETA recalc on later stops |
+| 4 Security / tests | **Expanded** | `scripts/test-delivery-tracking.sql` T01–T19 — run on staging before pilot |
+| 5 Routing data quality | **Partial** | Postal fields + dispatch readiness warnings; zones/capacity deferred |
+| 6 Route optimizer | **Deferred** | Out of pilot scope (v2) |
+
 ## Phase 1: Driver Access
 
 Build a driver/sevadar route access model before exposing route updates outside staff accounts.
 
-- Add secure driver magic links for assigned routes.
-- Store route-link token hashes, expiry, revocation, and last viewed timestamps.
-- Scope driver access to one assigned route only.
-- Let coordinators resend or revoke driver route links.
-- Keep the existing staff-authenticated driver page as the coordinator fallback.
+- [x] Add secure driver magic links for assigned routes.
+- [x] Store route-link token hashes, expiry, revocation, and last viewed timestamps.
+- [x] Scope driver access to one assigned route only.
+- [x] Let coordinators resend or revoke driver route links.
+- [x] Keep the existing staff-authenticated driver page as the coordinator fallback.
 
 Acceptance criteria:
 
@@ -26,11 +37,11 @@ Acceptance criteria:
 
 Deploy the SMS provider boundary so coordinators can send real tracking links.
 
-- Configure Twilio or another SMS provider for Edge Functions.
-- Keep provider secrets server-side only.
-- Send driver route links and client tracking links through server-side functions.
-- Log every send attempt in notification/audit tables.
-- Surface SMS failures in the coordinator dispatch page.
+- [x] Configure Twilio helper for Edge Functions (secrets server-side only).
+- [x] Send driver route links and client tracking links through server-side functions.
+- [x] Log every send attempt in `delivery_notifications` (including driver route rows).
+- [x] Surface SMS failures in the coordinator dispatch page (retryable).
+- [ ] Configure Twilio env vars on **production** Supabase and deploy functions.
 
 Acceptance criteria:
 
@@ -42,10 +53,11 @@ Acceptance criteria:
 
 Make delivery updates operationally useful for sevadars and coordinators.
 
-- Add coordinator actions for resend tracking link, revoke link, mark delayed, and update ETA.
-- Add driver actions for on the way, nearby, delivered, unable to contact, skipped, and delayed.
-- Add client-safe note validation so private notes do not leak to tracking pages.
-- Add simple ETA recalculation when a previous stop is completed or delayed.
+- [x] Coordinator: resend tracking link, revoke link, mark delayed, bump ETA (+15 min).
+- [x] Driver actions: on the way, nearby, delivered, unable to contact, skipped, delayed.
+- [x] Client-safe note validation so private notes do not leak to tracking pages.
+- [x] ETA recalculation for later stops when a prior stop is completed or delayed.
+- [x] Tracking page refreshes every 5s while visible.
 
 Acceptance criteria:
 
@@ -57,11 +69,10 @@ Acceptance criteria:
 
 Lock down the access model before any production rollout.
 
-- Run and expand `scripts/test-delivery-tracking.sql`.
-- Add tests for driver route token isolation.
-- Add tests for expired and revoked client tracking links.
-- Verify anonymous users cannot read raw recipients, sevadars, routes, route stops, or notification tables.
-- Verify tracking RPCs return only redacted fields.
+- [x] Expand `scripts/test-delivery-tracking.sql` (driver isolation + revoke client + driver SMS audit).
+- [ ] Run suite against staging/prod before first live day.
+- [x] Verify anonymous users cannot read raw recipients, sevadars, routes, route stops, or notification tables (T01+).
+- [x] Verify tracking RPCs return only redacted fields.
 
 Acceptance criteria:
 
@@ -73,11 +84,11 @@ Acceptance criteria:
 
 Prepare the app for real route planning instead of manual route bundles.
 
-- Add postal-code fields for recipients.
-- Add home postal-code or service-area fields for sevadars.
-- Add service zones or postal-code area catalog.
-- Add sevadar capacity and availability.
-- Add coordinator data-quality warnings for missing postal code, phone, or text consent.
+- [x] Add postal-code fields for recipients.
+- [x] Add home postal-code fields for sevadars.
+- [ ] Add service zones or postal-code area catalog.
+- [ ] Add sevadar capacity and availability.
+- [x] Coordinator data-quality warnings for missing postal code, phone, or text consent.
 
 Acceptance criteria:
 
@@ -86,7 +97,7 @@ Acceptance criteria:
 
 ## Phase 6: Route Optimizer
 
-Build the route suggestion engine after tracking and access are stable.
+Build the route suggestion engine after tracking and access are stable. **Out of pilot scope.**
 
 - Generate suggested route bundles from Glidden Gurdwara to delivery stops.
 - Group stops by postal area and delivery window.
@@ -94,18 +105,12 @@ Build the route suggestion engine after tracking and access are stable.
 - Keep coordinator review and manual override before routes are finalized.
 - Add rebalance suggestions for driver cancellation before pickup.
 
-Acceptance criteria:
+## Immediate recommendation (ops)
 
-- Coordinator can generate suggested routes for a batch.
-- Suggested routes explain why stops were assigned.
-- Manual route creation remains available as a fallback.
+Code for the end-to-end loop is in place. Finish production readiness via [go-live-checklist.md](go-live-checklist.md):
 
-## Immediate Recommendation
-
-Build driver magic links and real SMS next. That completes the end-to-end loop:
-
-1. Coordinator creates a route.
-2. Sevadar receives a route link by SMS.
-3. Sevadar updates pickup and stop progress.
-4. Client receives private tracking updates by SMS link.
-5. Coordinator can monitor exceptions from dispatch.
+1. Apply delivery + notification migrations to production.
+2. Deploy `send-delivery-tracking-sms` and `send-driver-route-sms`.
+3. Set Twilio secrets on Supabase.
+4. Bug bash the nine-step path with test phones.
+5. Run `scripts/test-delivery-tracking.sql` on staging.

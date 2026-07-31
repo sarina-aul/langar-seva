@@ -833,7 +833,7 @@ function BatchView({ batch, onBatchUpdated }: BatchViewProps) {
 
           {(batch.status === 'ready' || batch.status === 'pickup' || batch.status === 'dispatched') && (
             <p className="kitchen-stage-card__notify">
-              <span aria-hidden="true">✓</span> Coordinator notified • Sevadars alerted
+              <span aria-hidden="true">✓</span> Coordinator notified — send sevadar links from Dispatch
             </p>
           )}
         </div>
