@@ -50,13 +50,13 @@ Auth (`003`) wraps all `/staff/*` steps. Platform spec (`000`) ties the whole lo
 
 | ID | Spec | Status | Routes / surfaces |
 |----|------|--------|-------------------|
-| 000 | [langar-seva-platform](./000-langar-seva-platform/spec.md) | **Active reference** | All |
+| 000 | [langar-seva-platform](./000-langar-seva-platform/spec.md) | **Active reference** (updated 2026-07-31) | All |
 | 002 | [recipient-web-intake](./002-recipient-web-intake/spec.md) | **Shipped** (v1) | `/` |
-| 003 | [staff-auth](./003-staff-auth/spec.md) | **Shipped** (v1) | `/login`, `/staff/*` |
-| 004 | [coordinator-recipients](./004-coordinator-recipients/spec.md) | **Shipped** (v1) | `/staff/recipients` |
-| 005 | [kitchen-batch](./005-kitchen-batch/spec.md) | **Shipped** (v1) | `/staff/kitchen` |
+| 003 | [staff-auth](./003-staff-auth/spec.md) | **Shipped** (v1 as-built) | `/login`, `/staff/*` |
+| 004 | [coordinator-recipients](./004-coordinator-recipients/spec.md) | **Shipped** (v1 + staff intake) | `/staff/recipients` |
+| 005 | [kitchen-batch](./005-kitchen-batch/spec.md) | **Shipped** (v1 as-built) | `/staff/kitchen` |
 | 006 | [dispatch-delivery-tracking](./006-dispatch-delivery-tracking/spec.md) | **Shipped** (v1 pilot — prod Twilio ops remaining) | `/staff/dispatch`, `/track/:token`, `/driver/route/:token` |
-| 001 | [ivr-intake](./001-ivr-intake/spec.md) | **Planned** (v1.1) | Twilio Voice → Supabase |
+| 001 | [ivr-intake](./001-ivr-intake/spec.md) | **Planned** (v1.1 — code present, not live) | Twilio Voice → Supabase |
 
 ### IVR design artifacts (001 only)
 

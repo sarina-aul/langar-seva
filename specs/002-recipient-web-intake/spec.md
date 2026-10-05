@@ -4,9 +4,16 @@
 
 **Created**: 2026-06-27
 
+**Updated**: 2026-07-31
+
 **Status**: Shipped (v1 as-built)
 
 **Input**: Anonymous web form for langar meal requests at `/`
+
+**Implementation note**: Full match per [GitHub #17](https://github.com/sarina-aul/langar-seva/issues/17).
+Inserts set `intake_channel = 'web'`. Postal code field available for routing readiness. Wizard / i18n /
+touch-target work remains deferred (`docs/elderly-friendly-ui.md`). Staff-assisted intake is in
+[004](../004-coordinator-recipients/spec.md), not this public form.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -42,11 +49,11 @@ User can go back from the form to the recipient home screen without losing site 
 ### Functional Requirements
 
 - **FR-001**: Form MUST collect required fields: name, phone, address, unit/buzz, household size,
-  meals, delivery window, language; optional frequency, contact preference, notes.
-- **FR-002**: Submit MUST set `status = 'pending'` only.
-- **FR-003**: `meals` MUST NOT exceed `household_size` (DB constraint + client validation).
-- **FR-004**: Consent checkbox MUST be required before submit.
-- **FR-005**: Errors MUST be user-friendly (no raw JWT/RLS messages).
+  meals, delivery window, language; optional frequency, contact preference, notes, postal code. ✅
+- **FR-002**: Submit MUST set `status = 'pending'` only and `intake_channel = 'web'`. ✅
+- **FR-003**: `meals` MUST NOT exceed `household_size` (DB constraint + client validation). ✅
+- **FR-004**: Consent checkbox MUST be required before submit. ✅
+- **FR-005**: Errors MUST be user-friendly (no raw JWT/RLS messages). ✅
 
 ### Non-Functional Requirements
 
